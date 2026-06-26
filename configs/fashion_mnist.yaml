@@ -1,0 +1,20 @@
+dataset: fashion_mnist
+image_size: 28
+max_samples: 10000
+latent_dim: 16
+timesteps: 50
+batch_size: 64
+epochs:
+  autoencoder: 20
+  teacher: 50
+  consistency: 50
+model:
+  hidden_dim: 256
+  time_dim: 64
+  qubits: 4
+  depth: 2
+  placement: residual
+sampling_steps: [1, 2, 4]
+seed: 0
+device: cpu
+output_dir: results/fashion_mnist

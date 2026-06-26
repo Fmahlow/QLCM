@@ -1,0 +1,315 @@
+\documentclass[11pt]{article}
+
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{booktabs}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\usepackage[numbers,sort&compress]{natbib}
+
+\title{Quantum Latent Consistency Models for Few-Step Synthetic Image Generation}
+\author{Felipe Mahlow\thanks{Manuscript in preparation. Affiliation and acknowledgements to be completed.}}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+Diffusion models have become a leading approach to image synthesis, but their
+iterative sampling procedures remain expensive. Consistency models and latent
+consistency models reduce this cost by learning mappings that send noisy points
+along a diffusion trajectory directly toward a common clean endpoint. In
+parallel, quantum generative learning has explored parameterized quantum circuits
+as compact function classes for near-term quantum machine learning, including
+recent quantum denoising diffusion models. This paper proposes Quantum Latent
+Consistency Models (QLCMs), a hybrid quantum-classical architecture that
+distills a latent diffusion teacher into a parameterized quantum consistency
+student. The student receives a noisy latent state and a noise level, encodes
+them into a simulated variational quantum circuit, and predicts a clean latent
+endpoint or a residual correction to a classical consistency head. We formulate
+the QLCM training objective, describe one-step and few-step samplers, and propose
+a controlled evaluation protocol on MNIST and Fashion-MNIST against
+parameter-matched classical consistency students and latent diffusion baselines.
+The central question is not whether the model demonstrates quantum advantage,
+but whether quantum consistency modules provide useful inductive bias or
+parameter efficiency in low-dimensional latent image generation. Experimental
+results will be reported after completing the benchmark suite.
+\end{abstract}
+
+\textbf{Keywords:} quantum machine learning; consistency models; latent
+diffusion; generative modeling; synthetic image generation; variational quantum
+circuits
+
+\section{Introduction}
+
+Denoising diffusion probabilistic models (DDPMs) generate high-quality images by
+learning to reverse a gradual noising process \citep{ho2020ddpm}. Their
+performance has made diffusion-based methods a central class of modern
+generative models, but sampling typically requires many neural function
+evaluations. Latent diffusion models (LDMs) reduce the computational burden by
+moving the denoising process from pixel space into the latent space of an
+autoencoder \citep{rombach2022ldm}. Consistency models address a different part
+of the same bottleneck: instead of learning only a local denoising step, they
+learn a map that sends points along a probability-flow trajectory to a common
+clean endpoint, allowing one-step or few-step generation
+\citep{song2023consistency}. Latent Consistency Models (LCMs) combine this idea
+with latent diffusion and demonstrate fast synthesis through consistency
+distillation \citep{luo2023lcm}.
+
+Quantum machine learning offers another route for compact generative modeling.
+Parameterized quantum circuits can represent nonlinear feature maps and
+trainable measurement functions, and quantum generative models have been
+studied across adversarial, Born-machine, and diffusion-inspired formulations.
+Recent quantum denoising diffusion work has brought diffusion-style training
+into quantum and hybrid settings, including image-oriented quantum denoising
+architectures, a quantum single-sampling consistency-inspired architecture, and
+quantum-data diffusion models
+\citep{kolle2024qddm,zhang2023quddpm,kwun2024mixedquddpm}. These results show
+that the intersection of quantum circuits and diffusion models is already
+active. They also make broad novelty claims inappropriate: a new contribution
+must specify what changes in the learning objective, architecture, and empirical
+question.
+
+This paper proposes Quantum Latent Consistency Models (QLCMs). QLCMs transfer
+the consistency-model objective into a hybrid quantum-classical latent image
+generator. A classical encoder maps an image to a compact latent vector. A
+classical latent diffusion teacher defines trajectories in this latent space. A
+hybrid student then learns a consistency function in which a parameterized
+quantum circuit contributes either the direct clean-latent prediction, a
+time-conditioning signal, or a residual correction to a classical consistency
+head. This design differs from prior quantum image diffusion work by combining
+latent-space teacher-student consistency distillation with explicit ablations of
+where a quantum circuit should enter the consistency map.
+
+The intended contributions are:
+\begin{enumerate}
+    \item a formal QLCM architecture for simulator-based few-step image
+    generation;
+    \item three quantum consistency placements: direct head, residual
+    correction, and time-conditioning;
+    \item a distillation objective that adapts latent consistency training to a
+    parameterized quantum student;
+    \item a reproducible evaluation protocol on MNIST and Fashion-MNIST with
+    parameter-matched classical baselines.
+\end{enumerate}
+
+\section{Related Work}
+
+\subsection{Diffusion, Latent Diffusion, and Consistency Models}
+
+DDPMs formulate image generation as the learned reversal of a Markovian
+diffusion process \citep{ho2020ddpm}. Although effective, the reverse process is
+sequential and can require many denoising evaluations. LDMs address part of this
+cost by training diffusion models in a perceptually meaningful latent space
+rather than directly in pixel space \citep{rombach2022ldm}. Consistency models
+further target sampling cost by learning a function whose outputs remain
+consistent across points on the same probability-flow trajectory
+\citep{song2023consistency}. LCMs extend this strategy to pretrained latent
+diffusion models and enable few-step synthesis in latent space
+\citep{luo2023lcm}. QLCM adopts this trajectory-consistency idea but changes the
+student function class by introducing a quantum circuit into the consistency
+map.
+
+\subsection{Quantum Generative Models and Quantum Diffusion}
+
+Quantum generative modeling studies how quantum circuits can parameterize
+probability distributions, feature maps, and trainable measurement functions.
+Recent quantum diffusion work is especially relevant. \citet{zhang2023quddpm}
+introduced denoising diffusion probabilistic modeling for quantum data, while
+\citet{kwun2024mixedquddpm} extended quantum diffusion to a mixed-state setting.
+For classical image generation, \citet{kolle2024qddm} proposed quantum denoising
+diffusion architectures evaluated on datasets including MNIST and
+Fashion-MNIST, and also introduced a unitary single-sampling architecture
+motivated by consistency modeling. This is the closest prior work. QLCM is
+therefore positioned more narrowly: it studies latent-space consistency
+distillation from a classical teacher into quantum-hybrid students and compares
+three circuit placements under matched small-model constraints.
+
+\section{Method}
+
+\subsection{Latent Representation}
+
+Let $x_0 \in \mathbb{R}^{H \times W}$ denote an image. An encoder
+$E_\phi$ maps the image to a latent vector $z_0 = E_\phi(x_0)$, and a decoder
+$D_\psi$ reconstructs an image $\hat{x}_0 = D_\psi(z_0)$. In the first
+experiments, $E_\phi$ and $D_\psi$ may be implemented as a small convolutional
+autoencoder or as a deterministic low-dimensional transform for controlled
+ablation. The latent dimension is chosen to be small enough for quantum-circuit
+feature encoding under statevector simulation.
+
+\subsection{Latent Diffusion Teacher}
+
+The teacher defines a forward noising process in latent space:
+\begin{equation}
+    z_t = \alpha_t z_0 + \sigma_t \epsilon,\quad
+    \epsilon \sim \mathcal{N}(0, I),
+\end{equation}
+where $t \in [\epsilon, T]$ denotes a noise level and
+$\alpha_t,\sigma_t$ are schedule coefficients. A classical score or noise
+prediction network is trained in the standard latent diffusion manner. This
+teacher is used only to define trajectory pairs and targets for distillation.
+
+\subsection{Quantum Consistency Student}
+
+The QLCM student is a function
+\begin{equation}
+    f_\theta(z_t, t) \rightarrow \hat{z}_0,
+\end{equation}
+where $\hat{z}_0$ estimates the clean latent endpoint associated with $z_t$.
+The student contains a feature compressor, a parameterized quantum circuit, and
+a classical readout. A typical circuit receives an encoded vector
+$u(z_t,t)$ through angle rotations, applies $L$ layers of trainable rotations and
+entangling gates, and returns expectation values
+\begin{equation}
+    q_\theta(z_t,t) =
+    \left[
+    \langle Z_1 \rangle,\ldots,\langle Z_n \rangle
+    \right].
+\end{equation}
+These measurement features are decoded into a latent endpoint prediction.
+
+We consider three variants:
+\begin{description}
+    \item[QLCM-H.] The quantum circuit acts as the main consistency head.
+    \item[QLCM-R.] The quantum circuit predicts a residual correction to a
+    classical consistency estimate.
+    \item[QLCM-T.] The quantum circuit produces a time-conditioning vector that
+    modulates a classical consistency network.
+\end{description}
+
+QLCM-R is expected to be the most stable variant because the classical path can
+learn the dominant trajectory structure while the quantum circuit learns a
+compact correction.
+
+\subsection{Consistency Objective}
+
+Given two noise levels $s < t$ on the same teacher trajectory, consistency
+training encourages predictions from both points to agree:
+\begin{equation}
+    \mathcal{L}_{\mathrm{cons}} =
+    \left\|
+    f_\theta(z_t,t) -
+    \mathrm{sg}\left(f_{\theta^-}(z_s,s)\right)
+    \right\|_2^2,
+\end{equation}
+where $\mathrm{sg}(\cdot)$ stops gradients and $\theta^-$ may denote an
+exponential moving average of student parameters. When clean latents are
+available, an endpoint reconstruction term can be added:
+\begin{equation}
+    \mathcal{L}_{\mathrm{target}} =
+    \left\|
+    f_\theta(z_t,t) - z_0
+    \right\|_2^2.
+\end{equation}
+The combined training objective is
+\begin{equation}
+    \mathcal{L}_{\mathrm{QLCM}} =
+    \mathcal{L}_{\mathrm{cons}} +
+    \lambda \mathcal{L}_{\mathrm{target}}.
+\end{equation}
+
+\subsection{Few-Step Sampling}
+
+At inference time, sampling begins from $z_T \sim \mathcal{N}(0,I)$. In the
+one-step setting, the student directly predicts $\hat{z}_0=f_\theta(z_T,T)$ and
+the decoder produces $\hat{x}_0=D_\psi(\hat{z}_0)$. In the few-step setting, a
+short sequence of noise levels is used, allowing optional re-noising or teacher
+schedule corrections between student evaluations. The primary evaluation will
+compare one-, two-, and four-step sampling.
+
+\section{Experimental Protocol}
+
+\subsection{Datasets}
+
+The first benchmarks are MNIST and Fashion-MNIST. These datasets are small
+enough for simulator-based quantum experiments while still exposing meaningful
+differences in sample recognizability and class diversity. A synthetic
+Bars-and-Stripes dataset is used only for smoke tests.
+
+\subsection{Baselines}
+
+The planned baselines are:
+\begin{enumerate}
+    \item a classical latent diffusion teacher;
+    \item a parameter-matched classical latent consistency student;
+    \item a compact classical MLP consistency student;
+    \item existing quantum-denoising style baselines when reproducible settings
+    are available.
+\end{enumerate}
+
+\subsection{Ablations}
+
+The ablation grid varies the QLCM placement, number of qubits, circuit depth,
+feature encoding, latent dimension, and number of sampling steps. All reported
+models will use fixed seeds and matched preprocessing. Parameter counts and
+wall-clock time will be reported alongside sample-quality metrics.
+
+\input{../tables/ablation_template}
+
+\subsection{Metrics}
+
+The evaluation will report reconstruction quality for the latent autoencoder,
+sample grids, classifier-based recognizability, label entropy, KID or FID-like
+scores where statistically meaningful, parameter count, and sampling time. For
+low-resolution grayscale datasets, metric interpretation will be conservative:
+visual grids and classifier-based diagnostics will be treated as complementary
+rather than secondary to a single scalar score.
+
+\input{../tables/results_template}
+
+\section{Expected Results and Analysis Plan}
+
+This manuscript does not yet report final MNIST or Fashion-MNIST results.
+Before submission, this section will include:
+\begin{enumerate}
+    \item main quantitative comparisons across classical consistency, latent
+    diffusion, and QLCM variants;
+    \item one-, two-, and four-step sample grids;
+    \item ablation tables for qubit count and circuit depth;
+    \item runtime and parameter-efficiency analysis;
+    \item negative or mixed findings where the quantum module fails to improve
+    over classical baselines.
+\end{enumerate}
+
+The expected strongest result would be that QLCM-R matches a classical
+parameter-matched consistency student with fewer trainable parameters or better
+few-step sample recognizability. A weaker but still informative result would be
+that quantum modules work only as residual corrections and not as direct
+consistency heads. A negative result would remain publishable if the experiments
+clearly identify simulator bottlenecks, trainability issues, or conditions under
+which quantum consistency modules are not competitive.
+
+\section{Discussion}
+
+The proposed QLCM architecture shifts the role of the quantum circuit from
+iterative denoising to trajectory-consistent latent prediction. This change
+matters because it imports a specific acceleration principle from modern
+classical diffusion research into quantum generative modeling. It also creates a
+clear empirical test: whether a compact quantum module can serve as a useful
+student in consistency distillation.
+
+The study has several limitations by design. First, all experiments are
+simulator-based and therefore do not establish hardware quantum advantage.
+Second, MNIST and Fashion-MNIST are low-complexity datasets; positive results
+would not imply scalability to natural images. Third, statevector simulation
+limits the number of qubits and circuit depth. Fourth, parameter matching does
+not fully equalize optimization difficulty between classical and quantum
+students. These limitations should be stated as part of the contribution rather
+than hidden.
+
+\section{Conclusion}
+
+This paper proposes Quantum Latent Consistency Models as a hybrid
+quantum-classical approach to few-step synthetic image generation. QLCM distills
+a latent diffusion teacher into a quantum consistency student, aiming to combine
+the sampling efficiency of consistency models with the compact trainable feature
+maps of parameterized quantum circuits. The immediate next step is to complete a
+reproducible MNIST and Fashion-MNIST benchmark and determine whether quantum
+consistency modules provide measurable benefits under controlled simulator
+constraints.
+
+\bibliographystyle{unsrtnat}
+\bibliography{references}
+
+\end{document}

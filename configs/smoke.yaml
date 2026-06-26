@@ -1,0 +1,20 @@
+dataset: bars_stripes
+image_size: 8
+max_samples: 1024
+latent_dim: 16
+timesteps: 20
+batch_size: 32
+epochs:
+  autoencoder: 5
+  teacher: 5
+  consistency: 5
+model:
+  hidden_dim: 128
+  time_dim: 32
+  qubits: 4
+  depth: 1
+  placement: residual
+sampling_steps: [1, 2, 4]
+seed: 0
+device: cpu
+output_dir: results/bars_stripes

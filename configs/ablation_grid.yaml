@@ -1,0 +1,18 @@
+datasets: [mnist, fashion_mnist]
+latent_dims: [16]
+placements: [classical, head, residual, time]
+qubits: [4, 6, 8]
+depths: [1, 2, 4]
+sampling_steps: [1, 2, 4]
+seeds: [0, 1, 2]
+primary_subset:
+  dataset: mnist
+  placement: residual
+  qubits: 4
+  depth: 2
+  sampling_steps: 1
+  seeds: [0, 1, 2]
+notes:
+  - Run the primary subset first.
+  - Expand qubits/depth only if smoke and MNIST primary runs are stable.
+  - Treat 8-qubit runs as optional on CPU statevector simulation.
