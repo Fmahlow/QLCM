@@ -16,5 +16,5 @@ model:
   placement: residual
 sampling_steps: [1, 2, 4]
 seed: 0
-device: cpu
+device: cuda
 output_dir: results/mnist

@@ -1,19 +1,26 @@
 \begin{table}[t]
 \centering
-\caption{QLCM ablation plan. Values are placeholders until experiments are run.}
+\caption{QLCM ablation results on MNIST, seed 0 unless noted, 512 generated
+samples per row. Consistency MSE is the final-epoch training loss of
+\texttt{combined\_qlcm\_loss} (50 epochs). Label entropy diversity is
+computed from the predicted-label histogram of a small classifier over
+generated samples; maximum possible value is $\ln 10 \approx 2.303$.
+Source: \texttt{results/summary.csv}.}
 \label{tab:ablation}
-\begin{tabular}{lrrrrr}
+\begin{tabular}{lrrrrrr}
 \toprule
-Variant & Qubits & Depth & Steps & Consistency MSE & Recognizability \\
+Variant & Qubits & Depth & Steps & Consistency MSE & FID-like & Label entropy \\
 \midrule
-QLCM-H & 4 & 1 & 1 & TBD & TBD \\
-QLCM-H & 4 & 2 & 1 & TBD & TBD \\
-QLCM-R & 4 & 1 & 1 & TBD & TBD \\
-QLCM-R & 4 & 2 & 1 & TBD & TBD \\
-QLCM-R & 6 & 2 & 1 & TBD & TBD \\
-QLCM-T & 4 & 2 & 1 & TBD & TBD \\
-QLCM-R & 4 & 2 & 2 & TBD & TBD \\
-QLCM-R & 4 & 2 & 4 & TBD & TBD \\
+Classical & -- & -- & 1 & 0.154 & 382.9 (mean) & 1.996 (mean) \\
+QLCM-H & 4 & 1 & 1 & 1.651 & 368.4 & 1.522 \\
+QLCM-H & 4 & 2 & 1 & 1.642 & 329.4 & 1.215 \\
+QLCM-H & 6 & 2 & 1 & 1.083 & 393.9 & 1.687 \\
+QLCM-R & 4 & 1 & 1 & 0.155 & 400.3 & 2.015 \\
+QLCM-R & 4 & 2 & 1 & 0.155 (mean) & 391.7 (mean) & 1.998 (mean) \\
+QLCM-R & 6 & 2 & 1 & 0.154 & 379.3 & 1.995 \\
+QLCM-T & 4 & 2 & 1 & 0.150 & 358.2 & 2.064 \\
+QLCM-R & 4 & 2 & 2 & 0.155 & 465.2 & 1.857 \\
+QLCM-R & 4 & 2 & 4 & 0.155 & 519.3 & 1.716 \\
 \bottomrule
 \end{tabular}
 \end{table}

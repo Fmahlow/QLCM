@@ -21,6 +21,7 @@ def main():
     parser.add_argument("--dry-run", action="store_true")
     args = parser.parse_args()
     cfg = load_config(args.config)
+    torch.manual_seed(cfg.get("seed", 0))
     device = torch.device(cfg.get("device", "cpu"))
     dataset = build_dataset(cfg["dataset"], max_samples=cfg.get("max_samples"))
     loader = DataLoader(dataset, batch_size=cfg["batch_size"], shuffle=True)

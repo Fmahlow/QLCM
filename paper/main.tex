@@ -33,8 +33,19 @@ a controlled evaluation protocol on MNIST and Fashion-MNIST against
 parameter-matched classical consistency students and latent diffusion baselines.
 The central question is not whether the model demonstrates quantum advantage,
 but whether quantum consistency modules provide useful inductive bias or
-parameter efficiency in low-dimensional latent image generation. Experimental
-results will be reported after completing the benchmark suite.
+parameter efficiency in low-dimensional latent image generation. In simulator
+experiments on MNIST and Fashion-MNIST, the residual quantum placement
+(QLCM-R) does not outperform a parameter-matched classical consistency
+student: across three seeds it has 54\% more trainable parameters
+(139{,}640 vs. 90{,}640) and a slightly worse classifier-feature FID-like
+score ($391.7\pm4.7$ vs. $382.9\pm5.5$), with statistically indistinguishable
+sample diversity and recognizability. Using the quantum circuit as the
+primary consistency head (QLCM-H) trains to a substantially higher loss and
+collapses sample diversity (label entropy 1.2--1.7 vs. $\approx$2.0 out of a
+maximum of 2.303), confirming a failure mode anticipated at the design stage.
+We report this as a negative result for the architectures and dataset scale
+tested, together with the full evidence package needed to reproduce or
+challenge it.
 \end{abstract}
 
 \textbf{Keywords:} quantum machine learning; consistency models; latent
@@ -258,27 +269,168 @@ rather than secondary to a single scalar score.
 
 \input{../tables/results_template}
 
-\section{Expected Results and Analysis Plan}
+\subsection{Reproducibility and Environment}
 
-This manuscript does not yet report final MNIST or Fashion-MNIST results.
-Before submission, this section will include:
+All reported runs use the public training/evaluation scripts in this
+repository (\texttt{scripts/train\_autoencoder.py},
+\texttt{scripts/train\_teacher.py}, \texttt{scripts/train\_qlcm.py},
+\texttt{scripts/evaluate\_qlcm.py}), with configs
+\texttt{configs/mnist.yaml} and \texttt{configs/fashion\_mnist.yaml}
+unchanged except for setting \texttt{device: cuda}. Both the "quantum" circuit
+and all classical components are simulated in PyTorch on a single NVIDIA RTX
+2080 Ti GPU (PyTorch 2.8.0+cu128); there is no execution on quantum hardware
+and no claim of quantum advantage. MNIST and Fashion-MNIST subsets of 10{,}000
+training images are used, with a shared autoencoder (20 epochs) and latent
+diffusion teacher (50 epochs, $T=50$) per dataset, distilled into consistency
+students (50 epochs) under each placement/qubit/depth configuration. Random
+seeds are fixed via \texttt{torch.manual\_seed} per run; this seeding was a
+gap in the original training scripts identified and fixed during this
+experiment campaign (the seed field in config files was previously read but
+never applied). The primary MNIST comparison (classical vs.\ QLCM-R, 4
+qubits, depth 2) is repeated at seeds 0, 1, 2; all ablation and Fashion-MNIST
+rows use seed 0 only and should be treated as single-seed evidence. All
+metrics are produced by \texttt{scripts/evaluate\_qlcm.py} and aggregated
+without modification by \texttt{scripts/aggregate\_results.py} into
+\texttt{results/summary.csv}, which is the source of every number in this
+section and in Tables~\ref{tab:ablation} and~\ref{tab:main-results}.
+
+The FID-like metric uses 64-dimensional penultimate-layer features from a
+small CNN classifier (2 conv layers, 1 hidden layer) trained for 3 epochs on
+the real training split of the corresponding dataset, not an Inception
+network; it is only meaningful for relative comparison within this paper and
+is not comparable to FID values reported elsewhere in the literature.
+Recognizability is the same classifier's mean softmax confidence on generated
+samples. Label entropy is the Shannon entropy (in nats) of the classifier's
+predicted-label histogram over 512 generated samples, with a maximum of
+$\ln 10 \approx 2.303$ for a perfectly uniform class distribution; this is a
+generation-side diversity diagnostic and not a measure of sample fidelity to
+any specific ground-truth label.
+
+\section{Results and Analysis}
+
+\subsection{Primary MNIST Comparison: QLCM-R vs.\ Classical}
+
+Table~\ref{tab:main-results} reports the primary comparison. Over three seeds,
+the classical one-step consistency student reaches a classifier-feature
+FID-like score of $382.9 \pm 5.5$ with $90{,}640$ parameters. The residual
+quantum student (QLCM-R, 4 qubits, depth 2) reaches $391.7 \pm 4.7$ with
+$139{,}640$ parameters --- 54\% more parameters for a slightly \emph{worse}
+FID-like score, and statistically indistinguishable recognizability
+($0.610\pm0.013$ vs.\ $0.604\pm0.014$) and label entropy ($1.996\pm0.022$ vs.\
+$1.998\pm0.021$). The training-loss trajectories of the two students are
+nearly identical (final \texttt{combined\_qlcm\_loss} of 0.154 for classical
+vs.\ 0.155 for QLCM-R, averaged over seeds), and at matched random latent
+draws the two students produce visually similar sample grids
+(Figures~\ref{fig:mnist-classical} and~\ref{fig:mnist-qlcmr}), with a mean
+absolute pixel difference of 6.1/255 between grids generated from the same
+seed. We do not find evidence that the residual quantum module improves
+generation quality, diversity, or parameter efficiency over the classical
+baseline at this scale; if anything, it adds parameters without a measurable
+benefit. This matches the ``weaker but informative'' outcome anticipated in
+the experimental protocol, not the strongest hypothesized outcome.
+
+\begin{figure}[t]
+    \centering
+    \includegraphics[width=0.45\textwidth]{../figures/mnist_samples_classical.png}
+    \hfill
+    \includegraphics[width=0.45\textwidth]{../figures/mnist_samples_qlcm_r.png}
+    \caption{One-step MNIST samples from the classical consistency student
+    (left) and QLCM-R, 4 qubits/depth 2 (right), seed 0, identical initial
+    latent noise. 512 samples shown per grid.}
+    \label{fig:mnist-classical}
+    \label{fig:mnist-qlcmr}
+\end{figure}
+
+\subsection{Placement Ablation: Head, Residual, and Time-Conditioning}
+
+Table~\ref{tab:ablation} compares quantum placements on MNIST at seed 0. The
+direct quantum head (QLCM-H) is the clearest negative result: training loss
+plateaus around 1.6--1.7 (4 qubits, depths 1--2) or 1.08 (6 qubits, depth 2),
+roughly an order of magnitude above the $\approx$0.15 reached by classical,
+residual, and time-conditioning placements. QLCM-H's classifier-feature
+FID-like scores (329--394) are numerically competitive with or better than
+the other placements (358--400), but this is driven by mode collapse rather
+than sample quality: QLCM-H's label entropy (1.22--1.69) is well below
+classical/residual/time placements (1.97--2.06), meaning the FID-like metric
+is computed over a much narrower, less diverse set of predicted digit
+classes. This is consistent with the synthetic Bars-and-Stripes smoke test,
+where QLCM-H also converged far more slowly (loss 2.17 after 5 epochs) than
+classical or residual placements (loss 0.09). We treat this as confirming
+evidence, not merely a hint, for the design-time hypothesis that a quantum
+circuit is not yet competitive as the primary consistency bottleneck, at
+least at 4--6 qubits and depth 1--2 under statevector simulation. Residual
+(QLCM-R) and time-conditioning (QLCM-T) placements both train to loss
+parity with the classical baseline and do not show the QLCM-H diversity
+collapse.
+
+Increasing qubits from 4 to 6 at fixed depth 2 changes the residual
+placement's FID-like score from 397.9 to 379.3 and the head placement's from
+329.4 to 393.9 (non-monotonically, and on a single seed each), so we draw no
+qubit-scaling conclusion beyond noting that the effect is not large or
+consistent enough, at this sample size, to separate from seed variance
+($\pm$4.7--5.5 FID-like points on the 3-seed primary comparison).
+
+\subsection{Few-Step Sampling}
+
+Contrary to the motivating premise of few-step consistency sampling, FID-like
+scores get worse, not better, as the number of sampling steps increases for
+both classical (1-step: 389.9, 2-step: 469.9, 4-step: 495.2) and QLCM-R
+(1-step: 397.9, 2-step: 465.2, 4-step: 519.3) students. Inspecting
+\texttt{src/qlcm/sampling.py} shows the likely cause: the multi-step sampler
+injects unconditioned Gaussian noise
+($z \mathrel{+}= \mathrm{noise\_scale}\cdot\mathcal{N}(0,I)$) between student
+evaluations without a corresponding denoising correction term, so additional
+steps add stochastic drift rather than refining the estimate. This is a
+sampler implementation limitation, not evidence about the quantum module
+specifically, since both placements degrade by a similar relative amount. We
+report it rather than discard it, and flag few-step sampling quality as
+unresolved pending a corrected multi-step sampler.
+
+\subsection{Fashion-MNIST}
+
+The Fashion-MNIST classical and QLCM-R (4 qubits, depth 2) students follow
+the same pattern as MNIST: QLCM-R does not improve on the classical baseline
+(FID-like 416.4 vs.\ 428.1, a small improvement within likely seed noise
+given the MNIST seed spread; recognizability 0.503 vs.\ 0.527, slightly
+worse). Both students show pronounced mode collapse toward a single garment
+class (339/512 and 309/512 samples respectively predicted as class 0,
+``T-shirt/top,'' out of 512; label entropy 1.21 and 1.37 out of a 2.303
+maximum), visible in Figure~\ref{fig:fmnist-classical}. We attribute this
+primarily to the small teacher (50 epochs on a 10{,}000-image subset) and the
+unstable few-step structure discussed above, not to the placement of the
+quantum module, since both placements collapse similarly.
+
+\begin{figure}[t]
+    \centering
+    \includegraphics[width=0.45\textwidth]{../figures/fashion_mnist_samples_classical.png}
+    \caption{One-step Fashion-MNIST samples from the classical consistency
+    student, seed 0, 512 samples. QLCM-R samples (not shown) exhibit the same
+    mode collapse toward the dominant predicted class.}
+    \label{fig:fmnist-classical}
+\end{figure}
+
+\subsection{Summary of Findings}
+
 \begin{enumerate}
-    \item main quantitative comparisons across classical consistency, latent
-    diffusion, and QLCM variants;
-    \item one-, two-, and four-step sample grids;
-    \item ablation tables for qubit count and circuit depth;
-    \item runtime and parameter-efficiency analysis;
-    \item negative or mixed findings where the quantum module fails to improve
-    over classical baselines.
+    \item QLCM-R does not match or exceed the classical consistency baseline
+    on MNIST or Fashion-MNIST at the tested scale: it uses 54\% more
+    parameters for equal or slightly worse FID-like score, recognizability,
+    and diversity.
+    \item Using the quantum circuit as the direct consistency head (QLCM-H)
+    is a clear failure mode: roughly $10\times$ higher training loss and
+    pronounced mode collapse, replicated independently on both the synthetic
+    smoke dataset and MNIST.
+    \item Residual and time-conditioning placements are stable and train to
+    loss parity with the classical baseline, but provide no measured
+    advantage over it.
+    \item The multi-step sampler in this codebase degrades rather than
+    improves sample quality with additional steps, a previously undocumented
+    implementation issue uncovered during this evaluation; few-step sampling
+    claims should be considered unverified until this is fixed and
+    re-evaluated.
+    \item All ablation and Fashion-MNIST results are single-seed; only the
+    primary MNIST classical-vs.-QLCM-R comparison has 3-seed statistics.
 \end{enumerate}
-
-The expected strongest result would be that QLCM-R matches a classical
-parameter-matched consistency student with fewer trainable parameters or better
-few-step sample recognizability. A weaker but still informative result would be
-that quantum modules work only as residual corrections and not as direct
-consistency heads. A negative result would remain publishable if the experiments
-clearly identify simulator bottlenecks, trainability issues, or conditions under
-which quantum consistency modules are not competitive.
 
 \section{Discussion}
 
@@ -291,12 +443,32 @@ student in consistency distillation.
 
 The study has several limitations by design. First, all experiments are
 simulator-based and therefore do not establish hardware quantum advantage.
-Second, MNIST and Fashion-MNIST are low-complexity datasets; positive results
-would not imply scalability to natural images. Third, statevector simulation
-limits the number of qubits and circuit depth. Fourth, parameter matching does
-not fully equalize optimization difficulty between classical and quantum
-students. These limitations should be stated as part of the contribution rather
-than hidden.
+Second, MNIST and Fashion-MNIST are low-complexity datasets; the negative
+result reported here would not necessarily generalize to natural images,
+larger latent spaces, or larger teachers. Third, statevector simulation
+limits the number of qubits and circuit depth tested (4--6 qubits, depth
+1--2); the literature-recommended 8-qubit configuration was not run in this
+campaign and remains future work. Fourth, parameter matching does not fully
+equalize optimization difficulty between classical and quantum students --
+the quantum students have more parameters, not fewer, which strengthens
+rather than weakens the negative finding for QLCM-R. Fifth, all ablation and
+Fashion-MNIST rows are single-seed, so effect sizes smaller than the
+roughly 5-point FID-like seed variance observed on the 3-seed primary
+comparison should not be over-interpreted.
+
+The empirical results obtained here argue against the strongest hypothesized
+outcome from the research plan (QLCM-R matching the classical baseline with
+fewer parameters) and instead support the weaker, still-informative outcome:
+under matched simulator conditions, a residual or time-conditioning quantum
+module is trainable and stable but offers no measured benefit, while using
+the quantum circuit as the primary consistency bottleneck reliably fails to
+train and collapses sample diversity. We see this as useful negative
+evidence for a specific, falsifiable architectural claim, consistent with
+the framing adopted at the research-design stage, rather than as a reason to
+abandon the broader question. The few-step sampling result is inconclusive
+because of a sampler implementation issue identified during this campaign
+(Section~5.3) and should be re-run after that issue is fixed before drawing
+conclusions about few-step QLCM sampling specifically.
 
 \section{Conclusion}
 
@@ -304,10 +476,21 @@ This paper proposes Quantum Latent Consistency Models as a hybrid
 quantum-classical approach to few-step synthetic image generation. QLCM distills
 a latent diffusion teacher into a quantum consistency student, aiming to combine
 the sampling efficiency of consistency models with the compact trainable feature
-maps of parameterized quantum circuits. The immediate next step is to complete a
-reproducible MNIST and Fashion-MNIST benchmark and determine whether quantum
-consistency modules provide measurable benefits under controlled simulator
-constraints.
+maps of parameterized quantum circuits. We completed a reproducible MNIST and
+Fashion-MNIST benchmark (Section~5) comparing classical, residual-quantum
+(QLCM-R), head-quantum (QLCM-H), and time-conditioning-quantum (QLCM-T)
+consistency students under matched training budgets. At the tested scale (4--6
+simulated qubits, depth 1--2, 10{,}000-image training subsets), we did not
+find a measurable benefit from quantum consistency modules: QLCM-R matches
+the classical baseline's training loss and sample diversity while using 54\%
+more parameters, and QLCM-H fails to train competitively. These are negative
+results within the scope tested, not evidence against quantum consistency
+modules in general. Immediate next steps are: (1) fix the multi-step sampler
+identified in Section~5.3 and re-evaluate few-step sampling quality; (2) repeat
+the ablation grid (currently single-seed) across multiple seeds before drawing
+qubit/depth scaling conclusions; (3) test whether a larger teacher or latent
+dimension changes the residual-placement result; and (4) extend the qubit
+range to 8 qubits as originally planned, compute permitting.
 
 \bibliographystyle{unsrtnat}
 \bibliography{references}
