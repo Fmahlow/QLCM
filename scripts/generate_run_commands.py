@@ -37,6 +37,7 @@ def main():
             extras = [
                 f"--run-id {row['run_id']}",
                 f"--sampling-steps {row['sampling_steps']}",
+                f"--seed {row['seed']}",
             ]
             if row["qubits"] != "0":
                 extras.append(f"--qubits {row['qubits']}")

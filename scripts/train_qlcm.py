@@ -51,12 +51,15 @@ def main():
     parser.add_argument("--run-id", default=None)
     parser.add_argument("--autoencoder", default=None)
     parser.add_argument("--dry-run", action="store_true")
+    parser.add_argument("--seed", type=int, default=None)
     args = parser.parse_args()
     cfg = load_config(args.config)
     if args.qubits is not None:
         cfg["model"]["qubits"] = args.qubits
     if args.depth is not None:
         cfg["model"]["depth"] = args.depth
+    seed = args.seed if args.seed is not None else cfg.get("seed", 0)
+    torch.manual_seed(seed)
     placement = args.placement or cfg["model"].get("placement", "residual")
     device = torch.device(cfg.get("device", "cpu"))
     dataset = build_dataset(cfg["dataset"], max_samples=cfg.get("max_samples"))
@@ -97,6 +100,7 @@ def main():
         "depth": cfg["model"]["depth"],
         "sampling_steps": args.sampling_steps,
         "latent_dim": cfg["latent_dim"],
+        "seed": seed,
     }
     (output_dir / f"student_{suffix}.json").write_text(json.dumps(metadata, indent=2), encoding="utf-8")
 
