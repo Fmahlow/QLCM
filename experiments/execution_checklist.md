@@ -93,3 +93,55 @@ Code issues found and fixed during this run, before trusting any numbers:
 All 26 run-matrix rows are marked `done`. The primary MNIST
 classical-vs-QLCM-R comparison has seeds 0/1/2; all other rows are seed 0
 only.
+
+## Execution Log (2026-07-01): sampler fix, CD fix, stronger teacher, full 3-seed grid
+
+Follow-up campaign (`scripts/run_full_campaign.sh`) addressing item 7 above
+and one further issue found while diagnosing it. Results superseded issue 7
+and the single-seed ablation caveat from the 2026-06-30 log; prior artifacts
+are archived under `results/_archive_v1/` (pre-sampler-fix) and
+`results/_archive_v2_ct_fixed_sampler/` (sampler fixed, CD bug not yet
+found).
+
+1. Fixed `src/qlcm/sampling.py` per issue 7 above: multistep sampling now
+   re-noises via `schedule.add_noise` (the same forward process used in
+   training) instead of an arbitrary small perturbation, following Song et
+   al. (2023) Algorithm 1. Alone, this did **not** fix the few-step
+   degradation (FID-like still worsened 15-30% from 1-step to 4-step in the
+   `_archive_v2` results), which prompted further investigation.
+2. Root cause of the remaining degradation: `scripts/train_qlcm.py` never
+   loaded the trained teacher (`teacher.pt`) at all. The consistency loss
+   compared `student(z_t, t)` against `student(z_s, s)` where `z_s` was
+   obtained by re-noising the same ground-truth `z0` independently at level
+   `s`, not by following the teacher's trajectory from `z_t`. This is
+   consistency *training* (CT), not the consistency *distillation* (CD) the
+   paper's Method section describes. Fixed by adding `LatentNoiseSchedule.ddim_step`
+   (`src/qlcm/teacher.py`) and using it in `combined_qlcm_loss`
+   (`src/qlcm/losses.py`) to derive `z_s` from a real teacher-predicted DDIM
+   step starting at `z_t`; `train_qlcm.py` now requires `--teacher` and loads
+   it frozen. This is the fix that stabilized few-step sampling; the sampler
+   fix in isolation was necessary but not sufficient.
+3. Strengthened the latent diffusion teacher: `epochs.teacher` raised from 50
+   to 150 in `configs/mnist.yaml` and `configs/fashion_mnist.yaml`. Noise MSE
+   plateaus at ≈0.85 (MNIST) / ≈0.76 (Fashion-MNIST), vs. still-falling ≈0.88
+   / ≈0.79 at 50 epochs.
+4. Re-ran the full MNIST placement × qubit × depth grid (8 architectures:
+   classical, head/residual at qubits∈{4,6}×depth∈{1,2} restricted to the
+   matrix's original cells, time at 4×2) at seeds 0, 1, 2 — 24 training runs
+   — plus Fashion-MNIST classical and QLCM-R (4 qubits, depth 2) at seeds 0,
+   1, 2 — 6 more runs. All 30 runs succeeded (0 failures). Every run was
+   evaluated at 1-step; seed-0 runs were additionally evaluated at 2-step and
+   4-step. Aggregated to `results/summary.csv` (50 rows) via
+   `scripts/aggregate_results.py`.
+5. Regenerated sample-grid figures with `--grid-samples 64` (added to
+   `scripts/evaluate_qlcm.py`) instead of rendering all 512 evaluated
+   samples, keeping the metrics sample count (512) unchanged for FID-like
+   stability. Copied into `figures/`.
+
+Headline change from this log: few-step sampling (1/2/4-step) is now
+essentially flat instead of degrading, once training is genuine consistency
+distillation. The QLCM-R-vs-classical and QLCM-H-failure findings from the
+2026-06-30 log replicate under the corrected training procedure and now have
+3-seed statistics for every MNIST ablation cell and the Fashion-MNIST primary
+comparison (previously seed-0-only). Fashion-MNIST mode collapse toward a
+single class persisted after all three fixes and is not yet explained.

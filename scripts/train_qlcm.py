@@ -15,7 +15,7 @@ from src.datasets import build_dataset
 from src.qlcm.autoencoder import ConvAutoencoder, MlpAutoencoder
 from src.qlcm.consistency import ClassicalConsistencyModel, QuantumLatentConsistencyModel
 from src.qlcm.losses import combined_qlcm_loss
-from src.qlcm.teacher import LatentNoiseSchedule
+from src.qlcm.teacher import LatentNoiseSchedule, LatentTeacherScoreNet
 
 
 def build_autoencoder(cfg, device):
@@ -50,6 +50,7 @@ def main():
     parser.add_argument("--sampling-steps", type=int, default=None)
     parser.add_argument("--run-id", default=None)
     parser.add_argument("--autoencoder", default=None)
+    parser.add_argument("--teacher", default=None)
     parser.add_argument("--dry-run", action="store_true")
     parser.add_argument("--seed", type=int, default=None)
     args = parser.parse_args()
@@ -68,13 +69,23 @@ def main():
     if args.autoencoder:
         autoencoder.load_state_dict(torch.load(args.autoencoder, map_location=device))
     autoencoder.eval()
+    teacher = LatentTeacherScoreNet(
+        latent_dim=cfg["latent_dim"],
+        hidden_dim=cfg["model"]["hidden_dim"],
+        time_dim=cfg["model"]["time_dim"],
+    ).to(device)
+    if args.teacher:
+        teacher.load_state_dict(torch.load(args.teacher, map_location=device))
+    teacher.eval()
+    for parameter in teacher.parameters():
+        parameter.requires_grad_(False)
     student = build_student(cfg, placement, device)
     schedule = LatentNoiseSchedule(timesteps=cfg["timesteps"], device=str(device))
     if args.dry_run:
         x, _ = next(iter(loader))
         with torch.no_grad():
             z0 = autoencoder.encode(x.to(device))
-        loss, parts = combined_qlcm_loss(student, z0, schedule)
+        loss, parts = combined_qlcm_loss(student, teacher, z0, schedule)
         print({"placement": placement, "loss": float(loss.detach().cpu()), **parts})
         return
     optimizer = torch.optim.AdamW(student.parameters(), lr=1e-3)
@@ -83,7 +94,7 @@ def main():
         for x, _ in loader:
             with torch.no_grad():
                 z0 = autoencoder.encode(x.to(device))
-            loss, _ = combined_qlcm_loss(student, z0, schedule)
+            loss, _ = combined_qlcm_loss(student, teacher, z0, schedule)
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()

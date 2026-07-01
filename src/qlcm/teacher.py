@@ -54,3 +54,15 @@ class LatentNoiseSchedule:
         alpha_bar = self.alpha_bars[t].view(-1, 1)
         z_t = torch.sqrt(alpha_bar) * z0 + torch.sqrt(1.0 - alpha_bar) * noise
         return z_t, noise
+
+    def ddim_step(self, z_t: torch.Tensor, t: torch.Tensor, s: torch.Tensor, eps_hat: torch.Tensor):
+        """One deterministic DDIM step from noise level t down to s using a
+        teacher-predicted noise direction, reusing eps_hat so the update stays
+        on the teacher's empirical probability-flow ODE trajectory (Song et
+        al. 2023, consistency distillation): z0_hat is read off from eps_hat,
+        then re-noised to level s along the same eps_hat direction."""
+        alpha_bar_t = self.alpha_bars[t].view(-1, 1)
+        alpha_bar_s = self.alpha_bars[s].view(-1, 1)
+        z0_hat = (z_t - torch.sqrt(1.0 - alpha_bar_t) * eps_hat) / torch.sqrt(alpha_bar_t)
+        z_s = torch.sqrt(alpha_bar_s) * z0_hat + torch.sqrt(1.0 - alpha_bar_s) * eps_hat
+        return z_s, z0_hat

@@ -6,7 +6,7 @@ timesteps: 50
 batch_size: 64
 epochs:
   autoencoder: 20
-  teacher: 50
+  teacher: 150
   consistency: 50
 model:
   hidden_dim: 256

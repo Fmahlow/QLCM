@@ -1,26 +1,27 @@
 \begin{table}[t]
 \centering
-\caption{QLCM ablation results on MNIST, seed 0 unless noted, 512 generated
-samples per row. Consistency MSE is the final-epoch training loss of
-\texttt{combined\_qlcm\_loss} (50 epochs). Label entropy diversity is
-computed from the predicted-label histogram of a small classifier over
-generated samples; maximum possible value is $\ln 10 \approx 2.303$.
-Source: \texttt{results/summary.csv}.}
+\caption{QLCM ablation results on MNIST, mean $\pm$ population standard
+deviation over 3 seeds (0, 1, 2), 512 generated samples per run. Consistency
+MSE is the final-epoch training loss of \texttt{combined\_qlcm\_loss} (50
+epochs, consistency distillation from a 150-epoch teacher). Label entropy
+diversity is computed from the predicted-label histogram of a small
+classifier over generated samples; maximum possible value is
+$\ln 10 \approx 2.303$. Source: \texttt{results/summary.csv}.}
 \label{tab:ablation}
 \begin{tabular}{lrrrrrr}
 \toprule
 Variant & Qubits & Depth & Steps & Consistency MSE & FID-like & Label entropy \\
 \midrule
-Classical & -- & -- & 1 & 0.154 & 382.9 (mean) & 1.996 (mean) \\
-QLCM-H & 4 & 1 & 1 & 1.651 & 368.4 & 1.522 \\
-QLCM-H & 4 & 2 & 1 & 1.642 & 329.4 & 1.215 \\
-QLCM-H & 6 & 2 & 1 & 1.083 & 393.9 & 1.687 \\
-QLCM-R & 4 & 1 & 1 & 0.155 & 400.3 & 2.015 \\
-QLCM-R & 4 & 2 & 1 & 0.155 (mean) & 391.7 (mean) & 1.998 (mean) \\
-QLCM-R & 6 & 2 & 1 & 0.154 & 379.3 & 1.995 \\
-QLCM-T & 4 & 2 & 1 & 0.150 & 358.2 & 2.064 \\
-QLCM-R & 4 & 2 & 2 & 0.155 & 465.2 & 1.857 \\
-QLCM-R & 4 & 2 & 4 & 0.155 & 519.3 & 1.716 \\
+Classical & -- & -- & 1 & $0.106 \pm 0.001$ & $346.7 \pm 16.0$ & $2.032 \pm 0.017$ \\
+QLCM-H & 4 & 1 & 1 & $1.596 \pm 0.010$ & $330.2 \pm 47.1$ & $1.417 \pm 0.128$ \\
+QLCM-H & 4 & 2 & 1 & $1.612 \pm 0.019$ & $377.5 \pm 8.7$ & $1.049 \pm 0.230$ \\
+QLCM-H & 6 & 2 & 1 & $1.052 \pm 0.006$ & $356.5 \pm 17.1$ & $1.668 \pm 0.053$ \\
+QLCM-R & 4 & 1 & 1 & $0.106 \pm 0.001$ & $369.7 \pm 6.8$ & $2.018 \pm 0.022$ \\
+QLCM-R & 4 & 2 & 1 & $0.106 \pm 0.001$ & $359.4 \pm 3.0$ & $2.037 \pm 0.021$ \\
+QLCM-R & 6 & 2 & 1 & $0.106 \pm 0.001$ & $368.5 \pm 21.9$ & $2.014 \pm 0.025$ \\
+QLCM-T & 4 & 2 & 1 & $0.103 \pm 0.001$ & $389.3 \pm 11.5$ & $2.045 \pm 0.017$ \\
+QLCM-R & 4 & 2 & 2 & -- & 363.5 (seed 0) & 2.028 (seed 0) \\
+QLCM-R & 4 & 2 & 4 & -- & 355.9 (seed 0) & 1.945 (seed 0) \\
 \bottomrule
 \end{tabular}
 \end{table}
