@@ -17,6 +17,7 @@ from src.metrics import count_parameters, time_call
 from src.qlcm.autoencoder import ConvAutoencoder, MlpAutoencoder
 from src.qlcm.consistency import ClassicalConsistencyModel, QuantumLatentConsistencyModel
 from src.qlcm.sampling import sample_consistency
+from src.qlcm.teacher import LatentNoiseSchedule
 
 
 def build_autoencoder(cfg, device):
@@ -69,6 +70,7 @@ def main():
     parser.add_argument("--student", required=True)
     parser.add_argument("--steps", type=int, default=1)
     parser.add_argument("--samples", type=int, default=512)
+    parser.add_argument("--grid-samples", type=int, default=64, help="Number of samples rendered in the saved PNG grid (kept small for paper figures); metrics still use --samples.")
     parser.add_argument("--output-dir", default=None)
     parser.add_argument("--run-id", default=None)
     parser.add_argument("--seed", type=int, default=None)
@@ -91,6 +93,7 @@ def main():
     output_dir = Path(args.output_dir or cfg["output_dir"])
     output_dir.mkdir(parents=True, exist_ok=True)
 
+    schedule = LatentNoiseSchedule(timesteps=cfg["timesteps"], device=str(device))
     images, elapsed = time_call(
         sample_consistency,
         student,
@@ -98,12 +101,12 @@ def main():
         cfg["latent_dim"],
         args.samples,
         args.steps,
-        cfg["timesteps"],
+        schedule,
         str(device),
     )
     tag = args.run_id or f"{args.placement}_{args.steps}step"
     sample_path = output_dir / f"samples_{tag}.png"
-    save_grid(images, sample_path)
+    save_grid(images[: args.grid_samples], sample_path)
     metrics = {
         "run_id": args.run_id,
         "seed": seed,
