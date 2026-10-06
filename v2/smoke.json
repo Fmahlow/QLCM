@@ -1,0 +1,23 @@
+{
+  "dataset": "bars_stripes",
+  "max_samples": 64,
+  "latent": 4,
+  "hidden": 16,
+  "qubits": 3,
+  "depth": 2,
+  "timesteps": 8,
+  "batch": 16,
+  "ae_epochs": 1,
+  "teacher_epochs": 1,
+  "student_epochs": 1,
+  "ema_decay": 0.95,
+  "seed": 7,
+  "device": "cpu",
+  "samples": 16,
+  "evaluation_steps": [
+    1,
+    2,
+    4,
+    8
+  ]
+}
