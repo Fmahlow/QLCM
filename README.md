@@ -5,8 +5,9 @@ of a **hybrid quantum latent diffusion teacher** pays off under limited circuit
 calls and measurement budgets. Novelty is a candidate, not established priority.
 
 Start here: [Cold-start execution handoff](v2/HANDOFF.md). On a GPU server, the
-entry point is `python -m v2.orchestrate`; first use `--dry-run`. No GPU campaign
-or hardware experiment has been executed for v2.
+initial MNIST pilot entry point is `python -m v2.orchestrate`; first use `--dry-run`. No GPU campaign
+or hardware experiment has been executed for v2. Fashion-MNIST is an optional
+extension after evaluating the MNIST pilot.
 
 - [Research decision, protocol, audit and literature](v2/PROTOCOL.md)
 - [CPU smoke configuration](v2/smoke.json), [GPU pilot configuration](v2/gpu_pilot.json)

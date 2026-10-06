@@ -15,5 +15,6 @@ def main():
         for x,y in DataLoader(dataset,batch_size=256):
             probs=model(x.to(a.device)).softmax(1); correct+=int((probs.argmax(1).cpu()==y).sum()); total+=len(y); confidence_sum+=float(probs.max(1).values.sum())
     result={'checkpoint_sha256':hashlib.sha256(Path(a.checkpoint).read_bytes()).hexdigest(),'dataset':a.dataset,'heldout':True,'test_accuracy':correct/total,'samples':total,'real_mean_confidence':confidence_sum/total}
+    Path(a.output).parent.mkdir(parents=True,exist_ok=True)
     Path(a.output).write_text(json.dumps(result,indent=2)+'\n'); print(json.dumps(result))
 if __name__=='__main__': main()

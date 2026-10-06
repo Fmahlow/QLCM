@@ -6,7 +6,7 @@ A hipótese candidata é que consistency distillation pode reduzir o custo de
 inferência de um denoiser híbrido quântico em latente aprendido mantendo qualidade
 e diversidade; manter circuitos no estudante pode ou não valer a pena. O estudo
 caracteriza regimes qualidade/custo, não afirma quantum advantage ou “primeiro”.
-Piloto Fashion-MNIST, seeds 0/1/2; MNIST confirmação posterior. Não executar grade
+Piloto MNIST, seeds 0/1/2; Fashion-MNIST é extensão opcional posterior. Não executar grade
 ampla ou shots/ruído antes de gate. Handoff contém comandos e critérios propostos.
 
 ## Literatura e novidade

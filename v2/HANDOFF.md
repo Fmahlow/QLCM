@@ -25,23 +25,33 @@ servidor e registrar `pip freeze`, GPU, driver e CUDA junto aos resultados.
 ## Artefatos necessários
 
 O novo AE e teacher serão treinados do zero. Não dependem dos checkpoints v1.
-Para avaliar Fashion-MNIST, recuperar do servidor o checkpoint
-`results/fashion_mnist/fashion_mnist_classifier.pt` (SmallClassifier v1) e validar
-no split de teste completo. Nenhum resultado de validação foi inventado.
+O piloto inicial é **MNIST**, seeds 0/1/2. Fashion-MNIST é extensão opcional
+posterior, não o dataset de entrada de “rode o piloto QLCM”.
+
+É necessário um classificador MNIST independente e validado, mas **não é
+necessário recuperar um checkpoint histórico**. O caminho canônico abaixo prepara
+um classifier novo se ausente, em três épocas/10.000 imagens do split de treino,
+e valida separadamente no split de teste completo. Esses budgets seguem a rotina
+histórica de métricas como ponto de partida; acurácia adequada não é garantida.
+Não usar o teste para escolher épocas repetidamente. Se o gate de acurácia falhar,
+parar e registrar a necessidade de um protocolo classifier com validation split.
 
 ```sh
-.venv-v2/bin/python -m v2.validate_classifier --checkpoint results/fashion_mnist/fashion_mnist_classifier.pt --dataset fashion_mnist --output results/fashion_classifier_validation.json --device cuda
+.venv-v2/bin/python -m v2.prepare_classifier --dataset mnist --output results/v2-metrics/mnist_classifier.pt --device cuda --dry-run
+.venv-v2/bin/python -m v2.prepare_classifier --dataset mnist --output results/v2-metrics/mnist_classifier.pt --device cuda
+.venv-v2/bin/python -m v2.validate_classifier --checkpoint results/v2-metrics/mnist_classifier.pt --dataset mnist --output results/v2-metrics/mnist_classifier.validation.json --device cuda
 ```
 
-Se esse checkpoint não existir ou for incompatível, preparar e validar um
-classificador independente antes de iniciar. Não treinar o classificador dentro
-da avaliação gerativa. `v1/src/eval_metrics.py` contém a arquitetura e rotina
-histórica de treinamento; salvá-lo numa pasta separada exige execução explícita.
+Se `results/v2-metrics/mnist_classifier.pt` já existir, **pular preparação** e
+validar o existente. O preparador recusa sobrescrita. Alternativamente, um
+SmallClassifier v1 em `results/mnist/mnist_classifier.pt` pode ser reutilizado
+substituindo explicitamente o caminho em validação e orquestração; seu relatório
+held-out também deve ser gerado. Nenhum checkpoint histórico foi carregado agora.
 
 ## Comando exato de execução
 
 ```sh
-.venv-v2/bin/python -m v2.orchestrate --config v2/gpu_pilot.json --output results/v2-pilot-fmnist --classifier results/fashion_mnist/fashion_mnist_classifier.pt --classifier-validation results/fashion_classifier_validation.json --seeds 0,1,2 --stage-hours 6 --total-hours 24
+.venv-v2/bin/python -m v2.orchestrate --config v2/gpu_pilot.json --output results/v2-pilot-mnist --classifier results/v2-metrics/mnist_classifier.pt --classifier-validation results/v2-metrics/mnist_classifier.validation.json --seeds 0,1,2 --stage-hours 6 --total-hours 24
 ```
 
 Para retomar, repetir **exatamente** esse comando acrescentando `--resume`.
@@ -92,7 +102,7 @@ Não incluem treino nem custo de fila/hardware. Shots são `null`, nunca zero.
 
 CPU foi testado em 64 Bars-and-Stripes, latent=4, 3 qubits, depth=2, batch=16,
 uma época por estágio; resultados em `LOCAL_VALIDATION.md`. É apenas teste de
-execução. Nenhuma qualidade Fashion-MNIST nova ou benchmark GPU foi obtido.
+execução. Nenhuma qualidade MNIST ou Fashion-MNIST nova ou benchmark GPU foi obtido.
 Os tempos GPU são desconhecidos: medir primeiro os logs AE/teacher e interromper
 se extrapolarem o orçamento. Limite de 6h/etapa e 24h/invocação é proteção, não ETA.
 

@@ -10,7 +10,7 @@ from pathlib import Path
 ROOT=Path(__file__).resolve().parents[1]
 def sha(path): return hashlib.sha256(path.read_bytes()).hexdigest()
 def main():
-    p=argparse.ArgumentParser(); p.add_argument('--config',default='v2/gpu_pilot.json'); p.add_argument('--output',default='results/v2-pilot')
+    p=argparse.ArgumentParser(); p.add_argument('--config',default='v2/gpu_pilot.json'); p.add_argument('--output',default='results/v2-pilot-mnist')
     p.add_argument('--classifier'); p.add_argument('--classifier-validation'); p.add_argument('--dry-run',action='store_true'); p.add_argument('--resume',action='store_true')
     p.add_argument('--seeds',default='0,1,2'); p.add_argument('--stage-hours',type=float,default=6); p.add_argument('--total-hours',type=float,default=24)
     p.add_argument('--min-entropy-fraction',type=float,default=.8); args=p.parse_args()
@@ -22,7 +22,7 @@ def main():
     out=Path(args.output).resolve()
     plan=['ae','teacher','teacher evaluation + gate','distill hybrid','distill classical','distill no_entanglement','distill surrogate','eval']
     if args.dry_run:
-        print(json.dumps({'output':str(out),'fingerprint':fingerprint,'seeds':seeds,'stages':plan,'limits':{'stage_hours':args.stage_hours,'invocation_hours':args.total_hours},'required':['validated classifier state_dict','validation JSON with checkpoint_sha256, dataset, test_accuracy, real_mean_confidence, heldout=true'],'gate':'default heuristic: label entropy >= 0.8 ln(10); confidence >= 0.8 real mean confidence; not a fidelity guarantee'},indent=2)); return
+        print(json.dumps({'dataset':config['dataset'],'output':str(out),'fingerprint':fingerprint,'seeds':seeds,'stages':plan,'limits':{'stage_hours':args.stage_hours,'invocation_hours':args.total_hours},'required':['validated classifier state_dict','validation JSON with checkpoint_sha256, dataset, test_accuracy, real_mean_confidence, heldout=true'],'gate':'default heuristic: label entropy >= 0.8 ln(10); confidence >= 0.8 real mean confidence; not a fidelity guarantee'},indent=2)); return
     if config['dataset']!='bars_stripes':
         if not args.classifier or not args.classifier_validation: p.error('classifier and held-out validation JSON required')
         val=json.loads(Path(args.classifier_validation).read_text())

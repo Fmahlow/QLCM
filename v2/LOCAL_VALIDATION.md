@@ -61,3 +61,23 @@ resume pulou oito etapas. Quatro unit tests passaram em 2.065 s. Soma dos
 subprocessos 44.67 s; AE8.14, teacher5.31, teacher-eval2.48, estudantes
 5.70/5.95/7.27/7.18, avaliação final2.64 s. A diferença frente ao benchmark anterior
 reforça que smoke inclui startup e contenção local; não usar como ETA GPU.
+
+## Correção de escopo: piloto MNIST
+
+A revisão coordenadora confirmou MNIST como piloto inicial. Foram corrigidos
+config GPU, output padrão, handoff e protocolo; Fashion-MNIST fica como extensão
+opcional. `v2.orchestrate --dry-run` identifica MNIST, seeds0/1/2 e
+`results/v2-pilot-mnist`. `prepare_classifier --dataset mnist --device cuda
+--dry-run` não cria arquivo nem baixa/treina dados. Config/AST e recusa de
+sobrescrita passaram; CLI do validator aceita o dataset MNIST. Os quatro unit
+tests passaram novamente em 1.494 s.
+
+Novo preparador treina SmallClassifier usando somente training split; validação
+é comando separado e cria parent directory do relatório. Teste de I/O com
+TensorDataset **sintético mockado** (32 imagens aleatórias, uma época CPU) confirmou
+checkpoint/metadata, chamada `train=False` no validator, hash, acurácia/confiança
+finitas e escrita em diretório novo. Não foi uma validação estatística held-out
+real: a fixture substituiu ambos datasets só para testar I/O e argumentos.
+Nenhum dataset real foi baixado ou treinado; qualidade do classifier MNIST e
+execução CUDA continuam não verificadas. Checkpoint histórico não é requisito:
+o handoff fornece preparação nova, seguida de validação independente obrigatória.
