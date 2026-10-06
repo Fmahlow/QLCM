@@ -18,43 +18,8 @@
 \maketitle
 
 \begin{abstract}
-Diffusion models have become a leading approach to image synthesis, but their
-iterative sampling procedures remain expensive. Consistency models and latent
-consistency models reduce this cost by learning mappings that send noisy points
-along a diffusion trajectory directly toward a common clean endpoint. In
-parallel, quantum generative learning has explored parameterized quantum circuits
-as compact function classes for near-term quantum machine learning, including
-recent quantum denoising diffusion models. This paper proposes Quantum Latent
-Consistency Models (QLCMs), a hybrid quantum-classical architecture that
-distills a latent diffusion teacher into a parameterized quantum consistency
-student. The student receives a noisy latent state and a noise level, encodes
-them into a simulated variational quantum circuit, and predicts a clean latent
-endpoint or a residual correction to a classical consistency head. We formulate
-the QLCM training objective, describe one-step and few-step samplers, and propose
-a controlled evaluation protocol on MNIST and Fashion-MNIST against
-parameter-matched classical consistency students and latent diffusion baselines.
-The central question is not whether the model demonstrates quantum advantage,
-but whether quantum consistency modules provide useful inductive bias or
-parameter efficiency in low-dimensional latent image generation. In simulator
-experiments on MNIST and Fashion-MNIST, using genuine consistency
-distillation from a converged latent diffusion teacher and 3 seeds per
-configuration, the residual quantum placement (QLCM-R) does not outperform a
-parameter-matched classical consistency student: it has 54\% more trainable
-parameters (139{,}640 vs. 90{,}640) and a slightly worse classifier-feature
-FID-like score ($359.4\pm3.0$ vs. $346.7\pm16.0$), with statistically
-indistinguishable sample diversity and recognizability. Using the quantum
-circuit as the primary consistency head (QLCM-H) trains to a substantially
-higher loss and collapses sample diversity (label entropy 1.05--1.67 vs.\
-$\approx$2.03 out of a maximum of 2.303), confirming a failure mode
-anticipated at the design stage and replicated across two independent
-training procedures. We also report a methodological finding: an earlier
-version of this evaluation misattributed unstable few-step sampling to the
-multistep sampler alone; fixing the sampler was necessary but not
-sufficient, and few-step sampling only stabilized once the training script
-was corrected to perform teacher distillation rather than training from data
-alone. We report the quantum-placement result as a negative finding for the
-architectures and dataset scale tested, together with the full evidence
-package needed to reproduce or challenge it.
+Diffusion models have become a leading approach to image synthesis, but their iterative sampling procedures remain expensive. Consistency models and latent consistency models reduce this cost by learning mappings that send noisy points along a diffusion trajectory directly toward a common clean endpoint. In parallel, quantum generative learning has explored parameterized quantum circuits as compact function classes for near-term quantum machine learning, including recent quantum denoising diffusion models. This paper proposes Quantum Latent Consistency Models (QLCMs), a hybrid quantum-classical architecture that distills a latent diffusion teacher into a parameterized quantum consistency student. The student receives a noisy latent state and a noise level, encodes them into a simulated variational quantum circuit, and predicts a clean latent endpoint or a residual correction to a classical consistency head. We formulate the QLCM training objective, describe one-step and few-step samplers, and propose a controlled evaluation protocol on MNIST and Fashion-MNIST against parameter-matched classical consistency students and latent diffusion baselines. The central question is not whether the model demonstrates quantum advantage, but whether quantum consistency modules provide useful inductive bias or parameter efficiency in low-dimensional latent image generation. In simulator experiments on MNIST and Fashion-MNIST, using genuine consistency distillation from a converged latent diffusion teacher and 3 seeds per configuration, the residual quantum placement (QLCM-R) does not outperform a parameter-matched classical consistency student: it has 54\% more trainable parameters (139{,}640 vs. 90{,}640) and a slightly worse classifier-feature FID-like score ($359.4\pm3.0$ vs. $346.7\pm16.0$), with statistically indistinguishable sample diversity and recognizability. Using the quantum circuit as the primary consistency head (QLCM-H) trains to a substantially higher loss and collapses sample diversity (label entropy 1.05--1.67 vs.\ $\approx$2.03 out of a maximum of 2.303), confirming a failure mode anticipated at the design stage and replicated across two independent training procedures. We also report a methodological finding: an earlier version of this evaluation misattributed unstable few-step sampling to the multistep sampler alone; fixing the sampler was necessary but not sufficient, and few-step sampling only stabilized once the training script was corrected to perform teacher distillation rather than training from data alone. We report the quantum-placement result as a negative finding for the architectures and dataset scale tested, together with the full evidence package needed to reproduce or challenge it.
+
 \end{abstract}
 
 \textbf{Keywords:} quantum machine learning; consistency models; latent
