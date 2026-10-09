@@ -1,0 +1,45 @@
+{
+  "passed": true,
+  "heuristic_default": true,
+  "row": {
+    "model": "teacher",
+    "steps": 32,
+    "samples": 512,
+    "parameters": 21392,
+    "quantum_circuit_evaluations_per_sample": 32,
+    "quantum_circuit_evaluations_total": 16384,
+    "hardware_shots": null,
+    "hardware_noise": false,
+    "simulation": "exact statevector or algebraic/classical",
+    "pixel_variance": 0.21886833012104034,
+    "timing": {
+      "seconds": [
+        0.3304801600170322,
+        0.3301265789777972,
+        0.32998885202687234,
+        0.33302433899370953,
+        0.32974003098206595
+      ],
+      "median_seconds": 0.3301265835762024,
+      "warmup": 2,
+      "repeats": 5
+    },
+    "fid_like_classifier_features": 22.75273759930758,
+    "classifier_mean_confidence": 0.8465632796287537,
+    "label_entropy": 2.2751575438286906,
+    "label_entropy_max_bits": 2.302585092994046,
+    "predicted_label_histogram": [
+      46,
+      73,
+      53,
+      66,
+      43,
+      57,
+      41,
+      60,
+      34,
+      39
+    ]
+  },
+  "limitations": "Entropy and finite FID do not certify fidelity. Inspect saved samples before campaign; this gate permits only the pilot."
+}

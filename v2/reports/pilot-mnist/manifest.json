@@ -1,0 +1,580 @@
+{
+  "fingerprint": "72aa397d8bc4176356c482601a769ab1d92956b26be5a03c1bfbebb6dcabf9d0",
+  "identity": {
+    "config": {
+      "dataset": "mnist",
+      "max_samples": 10000,
+      "latent": 16,
+      "hidden": 128,
+      "qubits": 4,
+      "depth": 2,
+      "timesteps": 32,
+      "batch": 64,
+      "ae_epochs": 20,
+      "teacher_epochs": 150,
+      "student_epochs": 50,
+      "ema_decay": 0.999,
+      "seed": 0,
+      "device": "cuda",
+      "samples": 512,
+      "evaluation_steps": [
+        1,
+        2,
+        4,
+        8,
+        16,
+        32
+      ]
+    },
+    "seeds": [
+      0,
+      1,
+      2
+    ],
+    "sources": {
+      "v1/src/data.py": "4d6c25acdb96782d360225a119493309f18f329f4fef6d03619486e2b38d70a9",
+      "v1/src/datasets.py": "0c56816fef34857fb88337e8e66bafa046c0c50421b7a1644b942fabbab858bd",
+      "v1/src/eval_metrics.py": "22eaa7a817c9933eca360b29c23dd75ab4d19e3038a89f7dba5ef79e724e1f3d",
+      "v1/src/qlcm/autoencoder.py": "52c20f59833de12e870f723f07e13c3e93636ffa17ca0abb60750e94665e3407",
+      "v2/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "v2/core.py": "0b7f7ca4d961a31f3e85fc939e3a962bb1fd715b50f01a9f29d0e690b616d3d6",
+      "v2/orchestrate.py": "156497107004c3bc8571b5a606f839d3823647a91fc5303d3332c69cd0d18a62",
+      "v2/prepare_classifier.py": "5500515f99b2ef133842f38e916038c6c12251cbb0c02df26a643da7d3056f31",
+      "v2/run.py": "c6ac75e95eb82e9180093a664b4c12d10204da774ff83feafc7d0a4fa18c9363",
+      "v2/test_core.py": "ded7409d9ad6b52c5ed10742bde9068f8a8b60eb3383186552711dc0db251cda",
+      "v2/validate_classifier.py": "873f1b4d1a7edffe89e63d5c773b9ad81926690e965804c61b83fe696c19b794"
+    },
+    "classifier": "b642f615c2e5e7183289b4a2942a9b396f67168400a488f56a95a19553b6025b",
+    "classifier_validation": "06dc9e1a7616adb993932490a163ed4e191bdf6dbc4a9dc65f5a35417535593a",
+    "gate_entropy_fraction": 0.8,
+    "gate_confidence_real_ratio": 0.8,
+    "stage_hours": 6.0,
+    "total_hours": 24.0
+  },
+  "completed": {
+    "0:ae:": {
+      "/home/mahlow/QLCM/results/v2-pilot-mnist/seed-0/autoencoder.pt": "bf5acd3bedc47abbda153b9f5f4648f4856fbb9c7f5ec8360fee4244158490c0"
+    },
+    "0:teacher:": {
+      "/home/mahlow/QLCM/results/v2-pilot-mnist/seed-0/teacher.pt": "cd8bd88539da0b8bfe6c352abe63851e0bc967e4e10ee6b7e2c0ffbcf25dddc5"
+    },
+    "0:eval:['--kind', 'classical']": {
+      "/home/mahlow/QLCM/results/v2-pilot-mnist/seed-0/teacher_evaluation.json": "a96623caa701c4626da242831ac760fc5cfbaa0e7f6c7cc77d9c085abe641312"
+    },
+    "0:distill:['--kind', 'hybrid']": {
+      "/home/mahlow/QLCM/results/v2-pilot-mnist/seed-0/student_hybrid.pt": "7613640a649ae0c2a846f24c285f2a40df3b778b37216095d801141e67ccc790"
+    },
+    "0:distill:['--kind', 'classical']": {
+      "/home/mahlow/QLCM/results/v2-pilot-mnist/seed-0/student_classical.pt": "e37a9272ccb7caa163b371a01a3009c23e07003fabdcaa958cf2cb85577e1725"
+    },
+    "0:distill:['--kind', 'no_entanglement']": {
+      "/home/mahlow/QLCM/results/v2-pilot-mnist/seed-0/student_no_entanglement.pt": "ddac9025f244b5d047180cf0a33d37fc4c9f89dc134fc18fc40b7081e1d97d6a"
+    },
+    "0:distill:['--kind', 'surrogate']": {
+      "/home/mahlow/QLCM/results/v2-pilot-mnist/seed-0/student_surrogate.pt": "fb4a34f03425242ec1e5f14ad02ff36d2899e6fe5f1267f7cdd3f6359b01e6c7"
+    },
+    "0:eval:": {
+      "/home/mahlow/QLCM/results/v2-pilot-mnist/seed-0/evaluation.json": "2b4c1b351934be96912360080690ba1e790b7472ab3344d48a883feee38c525b"
+    },
+    "1:ae:": {
+      "/home/mahlow/QLCM/results/v2-pilot-mnist/seed-1/autoencoder.pt": "f028443a242922c403916ae8f72090106d20574641d29fc9fa08c8dcd599c892"
+    },
+    "1:teacher:": {
+      "/home/mahlow/QLCM/results/v2-pilot-mnist/seed-1/teacher.pt": "cd013ddd05eb4fa508bca95ed087d557270861401286a671f480b553c74192a4"
+    },
+    "1:eval:['--kind', 'classical']": {
+      "/home/mahlow/QLCM/results/v2-pilot-mnist/seed-1/teacher_evaluation.json": "92ab7a992660821b690ec0e32793388ed37c762d3255f93105cf4a12ec5213e9"
+    },
+    "1:distill:['--kind', 'hybrid']": {
+      "/home/mahlow/QLCM/results/v2-pilot-mnist/seed-1/student_hybrid.pt": "2b8eee1ea848ea4a9a85f6bdc0f773482e06319f733c520cc371e413eeb93b8a"
+    },
+    "1:distill:['--kind', 'classical']": {
+      "/home/mahlow/QLCM/results/v2-pilot-mnist/seed-1/student_classical.pt": "7089af33c4bbf7116f90f9c314967aa7d25aaa0ce151b20ebb26ca7214f4b5ed"
+    },
+    "1:distill:['--kind', 'no_entanglement']": {
+      "/home/mahlow/QLCM/results/v2-pilot-mnist/seed-1/student_no_entanglement.pt": "9e67478e134b70fca7f0fef185bf7e610c77d0aee19d4a7e614e6dc53ef4bf3e"
+    },
+    "1:distill:['--kind', 'surrogate']": {
+      "/home/mahlow/QLCM/results/v2-pilot-mnist/seed-1/student_surrogate.pt": "c8eb72e9c10e7e2afda21bf169689aa2eed3177555f15780e5bac3968c787c40"
+    },
+    "1:eval:": {
+      "/home/mahlow/QLCM/results/v2-pilot-mnist/seed-1/evaluation.json": "869b568cfa3b4ac2edea1484569df1ec1a0ec3982e77097cd1ea84f92bc6d5c8"
+    },
+    "2:ae:": {
+      "/home/mahlow/QLCM/results/v2-pilot-mnist/seed-2/autoencoder.pt": "8bad5929558c1632a756e15a41189817008af2db54f5d762c035e8691159e271"
+    },
+    "2:teacher:": {
+      "/home/mahlow/QLCM/results/v2-pilot-mnist/seed-2/teacher.pt": "b0438c42337bffdb2582cda1551f832b3d36d0eea49be9ff1bbb5a38e0a791ca"
+    },
+    "2:eval:['--kind', 'classical']": {
+      "/home/mahlow/QLCM/results/v2-pilot-mnist/seed-2/teacher_evaluation.json": "5771c12c0d525f397cd930eed2becdb41e860a166fa6f2458b8eab1901a15ac6"
+    },
+    "2:distill:['--kind', 'hybrid']": {
+      "/home/mahlow/QLCM/results/v2-pilot-mnist/seed-2/student_hybrid.pt": "d411844d5d325f59a32297680b110dacb13988055f755097a55e6966d13935b0"
+    },
+    "2:distill:['--kind', 'classical']": {
+      "/home/mahlow/QLCM/results/v2-pilot-mnist/seed-2/student_classical.pt": "a765cc2201f90eacd3e3cb8c964ebda4626bea181bc6724e59c05effbfa3e4a2"
+    },
+    "2:distill:['--kind', 'no_entanglement']": {
+      "/home/mahlow/QLCM/results/v2-pilot-mnist/seed-2/student_no_entanglement.pt": "f7e9ddbe610e83232f8c41a0e050ee278f888f4f8ff2f0923d5d5f74773dfbe0"
+    },
+    "2:distill:['--kind', 'surrogate']": {
+      "/home/mahlow/QLCM/results/v2-pilot-mnist/seed-2/student_surrogate.pt": "6fd523f6a053a91faf4c7e3acee7b19c4dcb3d0749050af88d17cfd191080cbb"
+    },
+    "2:eval:": {
+      "/home/mahlow/QLCM/results/v2-pilot-mnist/seed-2/evaluation.json": "c645b0ed1216ed628ad65e390387e4550d5f4412347d7710256da160335c0fa3"
+    }
+  },
+  "events": [
+    {
+      "key": "0:ae:",
+      "command": [
+        "/home/mahlow/QLCM/.venv-v2/bin/python",
+        "-m",
+        "v2.run",
+        "--config",
+        "/home/mahlow/QLCM/results/v2-pilot-mnist/seed-0/config.json",
+        "--output",
+        "/home/mahlow/QLCM/results/v2-pilot-mnist/seed-0",
+        "--stage",
+        "ae"
+      ],
+      "started_utc": "2026-10-09T18:26:04Z",
+      "completed": true,
+      "elapsed_seconds": 50.29671608604258
+    },
+    {
+      "key": "0:teacher:",
+      "command": [
+        "/home/mahlow/QLCM/.venv-v2/bin/python",
+        "-m",
+        "v2.run",
+        "--config",
+        "/home/mahlow/QLCM/results/v2-pilot-mnist/seed-0/config.json",
+        "--output",
+        "/home/mahlow/QLCM/results/v2-pilot-mnist/seed-0",
+        "--stage",
+        "teacher"
+      ],
+      "started_utc": "2026-10-09T18:26:54Z",
+      "completed": true,
+      "elapsed_seconds": 1324.4676025760127
+    },
+    {
+      "key": "0:eval:['--kind', 'classical']",
+      "command": [
+        "/home/mahlow/QLCM/.venv-v2/bin/python",
+        "-m",
+        "v2.run",
+        "--config",
+        "/home/mahlow/QLCM/results/v2-pilot-mnist/seed-0/config.json",
+        "--output",
+        "/home/mahlow/QLCM/results/v2-pilot-mnist/seed-0",
+        "--stage",
+        "eval",
+        "--kind",
+        "classical",
+        "--classifier",
+        "/home/mahlow/QLCM/results/v2-metrics/mnist_classifier.pt"
+      ],
+      "started_utc": "2026-10-09T18:48:59Z",
+      "completed": true,
+      "elapsed_seconds": 11.299033709976356
+    },
+    {
+      "key": "0:distill:['--kind', 'hybrid']",
+      "command": [
+        "/home/mahlow/QLCM/.venv-v2/bin/python",
+        "-m",
+        "v2.run",
+        "--config",
+        "/home/mahlow/QLCM/results/v2-pilot-mnist/seed-0/config.json",
+        "--output",
+        "/home/mahlow/QLCM/results/v2-pilot-mnist/seed-0",
+        "--stage",
+        "distill",
+        "--kind",
+        "hybrid"
+      ],
+      "started_utc": "2026-10-09T18:49:10Z",
+      "completed": true,
+      "elapsed_seconds": 535.5967079619877
+    },
+    {
+      "key": "0:distill:['--kind', 'classical']",
+      "command": [
+        "/home/mahlow/QLCM/.venv-v2/bin/python",
+        "-m",
+        "v2.run",
+        "--config",
+        "/home/mahlow/QLCM/results/v2-pilot-mnist/seed-0/config.json",
+        "--output",
+        "/home/mahlow/QLCM/results/v2-pilot-mnist/seed-0",
+        "--stage",
+        "distill",
+        "--kind",
+        "classical"
+      ],
+      "started_utc": "2026-10-09T18:58:06Z",
+      "completed": true,
+      "elapsed_seconds": 118.68304075399647
+    },
+    {
+      "key": "0:distill:['--kind', 'no_entanglement']",
+      "command": [
+        "/home/mahlow/QLCM/.venv-v2/bin/python",
+        "-m",
+        "v2.run",
+        "--config",
+        "/home/mahlow/QLCM/results/v2-pilot-mnist/seed-0/config.json",
+        "--output",
+        "/home/mahlow/QLCM/results/v2-pilot-mnist/seed-0",
+        "--stage",
+        "distill",
+        "--kind",
+        "no_entanglement"
+      ],
+      "started_utc": "2026-10-09T19:00:04Z",
+      "completed": true,
+      "elapsed_seconds": 532.4335978400195
+    },
+    {
+      "key": "0:distill:['--kind', 'surrogate']",
+      "command": [
+        "/home/mahlow/QLCM/.venv-v2/bin/python",
+        "-m",
+        "v2.run",
+        "--config",
+        "/home/mahlow/QLCM/results/v2-pilot-mnist/seed-0/config.json",
+        "--output",
+        "/home/mahlow/QLCM/results/v2-pilot-mnist/seed-0",
+        "--stage",
+        "distill",
+        "--kind",
+        "surrogate"
+      ],
+      "started_utc": "2026-10-09T19:08:57Z",
+      "completed": true,
+      "elapsed_seconds": 191.22452798701124
+    },
+    {
+      "key": "0:eval:",
+      "command": [
+        "/home/mahlow/QLCM/.venv-v2/bin/python",
+        "-m",
+        "v2.run",
+        "--config",
+        "/home/mahlow/QLCM/results/v2-pilot-mnist/seed-0/config.json",
+        "--output",
+        "/home/mahlow/QLCM/results/v2-pilot-mnist/seed-0",
+        "--stage",
+        "eval",
+        "--classifier",
+        "/home/mahlow/QLCM/results/v2-metrics/mnist_classifier.pt"
+      ],
+      "started_utc": "2026-10-09T19:12:08Z",
+      "completed": true,
+      "elapsed_seconds": 21.67438801197568
+    },
+    {
+      "key": "1:ae:",
+      "command": [
+        "/home/mahlow/QLCM/.venv-v2/bin/python",
+        "-m",
+        "v2.run",
+        "--config",
+        "/home/mahlow/QLCM/results/v2-pilot-mnist/seed-1/config.json",
+        "--output",
+        "/home/mahlow/QLCM/results/v2-pilot-mnist/seed-1",
+        "--stage",
+        "ae"
+      ],
+      "started_utc": "2026-10-09T19:12:30Z",
+      "completed": true,
+      "elapsed_seconds": 50.101550873951055
+    },
+    {
+      "key": "1:teacher:",
+      "command": [
+        "/home/mahlow/QLCM/.venv-v2/bin/python",
+        "-m",
+        "v2.run",
+        "--config",
+        "/home/mahlow/QLCM/results/v2-pilot-mnist/seed-1/config.json",
+        "--output",
+        "/home/mahlow/QLCM/results/v2-pilot-mnist/seed-1",
+        "--stage",
+        "teacher"
+      ],
+      "started_utc": "2026-10-09T19:13:20Z",
+      "completed": true,
+      "elapsed_seconds": 1214.3832472839858
+    },
+    {
+      "key": "1:eval:['--kind', 'classical']",
+      "command": [
+        "/home/mahlow/QLCM/.venv-v2/bin/python",
+        "-m",
+        "v2.run",
+        "--config",
+        "/home/mahlow/QLCM/results/v2-pilot-mnist/seed-1/config.json",
+        "--output",
+        "/home/mahlow/QLCM/results/v2-pilot-mnist/seed-1",
+        "--stage",
+        "eval",
+        "--kind",
+        "classical",
+        "--classifier",
+        "/home/mahlow/QLCM/results/v2-metrics/mnist_classifier.pt"
+      ],
+      "started_utc": "2026-10-09T19:33:34Z",
+      "completed": true,
+      "elapsed_seconds": 11.298842362011783
+    },
+    {
+      "key": "1:distill:['--kind', 'hybrid']",
+      "command": [
+        "/home/mahlow/QLCM/.venv-v2/bin/python",
+        "-m",
+        "v2.run",
+        "--config",
+        "/home/mahlow/QLCM/results/v2-pilot-mnist/seed-1/config.json",
+        "--output",
+        "/home/mahlow/QLCM/results/v2-pilot-mnist/seed-1",
+        "--stage",
+        "distill",
+        "--kind",
+        "hybrid"
+      ],
+      "started_utc": "2026-10-09T19:33:46Z",
+      "completed": true,
+      "elapsed_seconds": 533.5924535179511
+    },
+    {
+      "key": "1:distill:['--kind', 'classical']",
+      "command": [
+        "/home/mahlow/QLCM/.venv-v2/bin/python",
+        "-m",
+        "v2.run",
+        "--config",
+        "/home/mahlow/QLCM/results/v2-pilot-mnist/seed-1/config.json",
+        "--output",
+        "/home/mahlow/QLCM/results/v2-pilot-mnist/seed-1",
+        "--stage",
+        "distill",
+        "--kind",
+        "classical"
+      ],
+      "started_utc": "2026-10-09T19:42:39Z",
+      "completed": true,
+      "elapsed_seconds": 116.52692617999855
+    },
+    {
+      "key": "1:distill:['--kind', 'no_entanglement']",
+      "command": [
+        "/home/mahlow/QLCM/.venv-v2/bin/python",
+        "-m",
+        "v2.run",
+        "--config",
+        "/home/mahlow/QLCM/results/v2-pilot-mnist/seed-1/config.json",
+        "--output",
+        "/home/mahlow/QLCM/results/v2-pilot-mnist/seed-1",
+        "--stage",
+        "distill",
+        "--kind",
+        "no_entanglement"
+      ],
+      "started_utc": "2026-10-09T19:44:36Z",
+      "completed": true,
+      "elapsed_seconds": 519.3007322039921
+    },
+    {
+      "key": "1:distill:['--kind', 'surrogate']",
+      "command": [
+        "/home/mahlow/QLCM/.venv-v2/bin/python",
+        "-m",
+        "v2.run",
+        "--config",
+        "/home/mahlow/QLCM/results/v2-pilot-mnist/seed-1/config.json",
+        "--output",
+        "/home/mahlow/QLCM/results/v2-pilot-mnist/seed-1",
+        "--stage",
+        "distill",
+        "--kind",
+        "surrogate"
+      ],
+      "started_utc": "2026-10-09T19:53:15Z",
+      "completed": true,
+      "elapsed_seconds": 184.40445331705268
+    },
+    {
+      "key": "1:eval:",
+      "command": [
+        "/home/mahlow/QLCM/.venv-v2/bin/python",
+        "-m",
+        "v2.run",
+        "--config",
+        "/home/mahlow/QLCM/results/v2-pilot-mnist/seed-1/config.json",
+        "--output",
+        "/home/mahlow/QLCM/results/v2-pilot-mnist/seed-1",
+        "--stage",
+        "eval",
+        "--classifier",
+        "/home/mahlow/QLCM/results/v2-metrics/mnist_classifier.pt"
+      ],
+      "started_utc": "2026-10-09T19:56:19Z",
+      "completed": true,
+      "elapsed_seconds": 21.876818734046537
+    },
+    {
+      "key": "2:ae:",
+      "command": [
+        "/home/mahlow/QLCM/.venv-v2/bin/python",
+        "-m",
+        "v2.run",
+        "--config",
+        "/home/mahlow/QLCM/results/v2-pilot-mnist/seed-2/config.json",
+        "--output",
+        "/home/mahlow/QLCM/results/v2-pilot-mnist/seed-2",
+        "--stage",
+        "ae"
+      ],
+      "started_utc": "2026-10-09T19:56:41Z",
+      "completed": true,
+      "elapsed_seconds": 50.05127049901057
+    },
+    {
+      "key": "2:teacher:",
+      "command": [
+        "/home/mahlow/QLCM/.venv-v2/bin/python",
+        "-m",
+        "v2.run",
+        "--config",
+        "/home/mahlow/QLCM/results/v2-pilot-mnist/seed-2/config.json",
+        "--output",
+        "/home/mahlow/QLCM/results/v2-pilot-mnist/seed-2",
+        "--stage",
+        "teacher"
+      ],
+      "started_utc": "2026-10-09T19:57:31Z",
+      "completed": true,
+      "elapsed_seconds": 1165.3222827109857
+    },
+    {
+      "key": "2:eval:['--kind', 'classical']",
+      "command": [
+        "/home/mahlow/QLCM/.venv-v2/bin/python",
+        "-m",
+        "v2.run",
+        "--config",
+        "/home/mahlow/QLCM/results/v2-pilot-mnist/seed-2/config.json",
+        "--output",
+        "/home/mahlow/QLCM/results/v2-pilot-mnist/seed-2",
+        "--stage",
+        "eval",
+        "--kind",
+        "classical",
+        "--classifier",
+        "/home/mahlow/QLCM/results/v2-metrics/mnist_classifier.pt"
+      ],
+      "started_utc": "2026-10-09T20:16:57Z",
+      "completed": true,
+      "elapsed_seconds": 11.297326926956885
+    },
+    {
+      "key": "2:distill:['--kind', 'hybrid']",
+      "command": [
+        "/home/mahlow/QLCM/.venv-v2/bin/python",
+        "-m",
+        "v2.run",
+        "--config",
+        "/home/mahlow/QLCM/results/v2-pilot-mnist/seed-2/config.json",
+        "--output",
+        "/home/mahlow/QLCM/results/v2-pilot-mnist/seed-2",
+        "--stage",
+        "distill",
+        "--kind",
+        "hybrid"
+      ],
+      "started_utc": "2026-10-09T20:17:08Z",
+      "completed": true,
+      "elapsed_seconds": 518.2455228469917
+    },
+    {
+      "key": "2:distill:['--kind', 'classical']",
+      "command": [
+        "/home/mahlow/QLCM/.venv-v2/bin/python",
+        "-m",
+        "v2.run",
+        "--config",
+        "/home/mahlow/QLCM/results/v2-pilot-mnist/seed-2/config.json",
+        "--output",
+        "/home/mahlow/QLCM/results/v2-pilot-mnist/seed-2",
+        "--stage",
+        "distill",
+        "--kind",
+        "classical"
+      ],
+      "started_utc": "2026-10-09T20:25:46Z",
+      "completed": true,
+      "elapsed_seconds": 116.52345537295332
+    },
+    {
+      "key": "2:distill:['--kind', 'no_entanglement']",
+      "command": [
+        "/home/mahlow/QLCM/.venv-v2/bin/python",
+        "-m",
+        "v2.run",
+        "--config",
+        "/home/mahlow/QLCM/results/v2-pilot-mnist/seed-2/config.json",
+        "--output",
+        "/home/mahlow/QLCM/results/v2-pilot-mnist/seed-2",
+        "--stage",
+        "distill",
+        "--kind",
+        "no_entanglement"
+      ],
+      "started_utc": "2026-10-09T20:27:43Z",
+      "completed": true,
+      "elapsed_seconds": 539.792170139961
+    },
+    {
+      "key": "2:distill:['--kind', 'surrogate']",
+      "command": [
+        "/home/mahlow/QLCM/.venv-v2/bin/python",
+        "-m",
+        "v2.run",
+        "--config",
+        "/home/mahlow/QLCM/results/v2-pilot-mnist/seed-2/config.json",
+        "--output",
+        "/home/mahlow/QLCM/results/v2-pilot-mnist/seed-2",
+        "--stage",
+        "distill",
+        "--kind",
+        "surrogate"
+      ],
+      "started_utc": "2026-10-09T20:36:43Z",
+      "completed": true,
+      "elapsed_seconds": 207.0645418339991
+    },
+    {
+      "key": "2:eval:",
+      "command": [
+        "/home/mahlow/QLCM/.venv-v2/bin/python",
+        "-m",
+        "v2.run",
+        "--config",
+        "/home/mahlow/QLCM/results/v2-pilot-mnist/seed-2/config.json",
+        "--output",
+        "/home/mahlow/QLCM/results/v2-pilot-mnist/seed-2",
+        "--stage",
+        "eval",
+        "--classifier",
+        "/home/mahlow/QLCM/results/v2-metrics/mnist_classifier.pt"
+      ],
+      "started_utc": "2026-10-09T20:40:10Z",
+      "completed": true,
+      "elapsed_seconds": 21.72364798199851
+    }
+  ]
+}

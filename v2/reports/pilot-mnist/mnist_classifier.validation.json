@@ -1,0 +1,8 @@
+{
+  "checkpoint_sha256": "b642f615c2e5e7183289b4a2942a9b396f67168400a488f56a95a19553b6025b",
+  "dataset": "mnist",
+  "heldout": true,
+  "test_accuracy": 0.9589,
+  "samples": 10000,
+  "real_mean_confidence": 0.9415630031585693
+}
