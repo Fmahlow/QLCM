@@ -91,3 +91,81 @@ poucos pontos de FID-like (por exemplo, estudante em 4 passos abaixo do teacher
 completo na seed 0) estão dentro do ruído. Apenas dois valores de épocas e de EMA,
 learning rate fixo. Shots finitos, ruído e leitura integral de OQIDDM continuam
 pendentes.
+
+## Extensão de datasets e controle do teacher — 2026-10-13
+
+`v2/diagnostics/dataset_teacher_campaign.py`. Pergunta dupla: a destilação
+generaliza para outros dados, e o circuito no teacher faz diferença? Para cada
+dataset e seed, um AE e três teachers sobre esse mesmo AE: hybrid, classical e
+no_entanglement. O teacher híbrido recebe estudantes hybrid/classical/surrogate; os
+teachers de controle recebem um estudante classical. Estudantes com 200 épocas e
+EMA 0,95; demais hiperparâmetros iguais aos do piloto. No MNIST, AE, teacher
+híbrido e seus estudantes são os do piloto e do diagnóstico (copiados, não
+retreinados). 4 datasets x 3 seeds: 36 teachers, todos aprovados no gate, 0 falhas.
+
+Mudanças de código: `teacher_kind` configurável em `v2/run.py` (default `hybrid`;
+checkpoints do piloto reavaliados dão métricas idênticas), KMNIST e PneumoniaMNIST
+em `v1/src/datasets.py` (aditivo). Essas mudanças alteram o fingerprint do
+orquestrador: o piloto original não pode mais ser retomado com `--resume`.
+
+Classificadores (validados no split de teste completo; orçamento fixado antes de
+olhar o teste): Fashion-MNIST e KMNIST com 60.000 imagens / 5 épocas, acurácia
+0,8889 e 0,9314; PneumoniaMNIST com 4.708 imagens / 10 épocas, acurácia 0,8269.
+O MNIST mantém 10.000 / 3 épocas (0,9589). **FID-like não é comparável entre
+datasets.**
+
+PneumoniaMNIST (MedMNIST v2, CC BY 4.0) tem 2 classes desbalanceadas (1.214 /
+3.494). O gate de diversidade usa ali 0,8 x a entropia real dos rótulos de treino
+(0,571) em vez de 0,8 ln10; com 2 classes a entropia mede só o equilíbrio entre
+classes, e o FID-like vem de um classificador binário.
+
+FID-like, média ± desvio populacional de três seeds. "T" é o tipo de teacher.
+
+| Dataset | T | Teacher 1 passo | Teacher 4 | Teacher 32 | Estudante clássico 1 passo | Estudante clássico 4 | Estudante clássico 32 |
+|---|---|---|---|---|---|---|---|
+| MNIST | hybrid | 483,1 ± 6,5 | 52,3 ± 4,7 | 24,7 ± 1,5 | 28,0 ± 2,7 | 24,1 ± 3,0 | 41,4 ± 11,2 |
+| MNIST | classical | 489,9 ± 5,2 | 53,4 ± 4,2 | 25,3 ± 1,5 | 28,6 ± 3,0 | 24,5 ± 3,6 | 39,1 ± 9,9 |
+| MNIST | no_entanglement | 484,2 ± 7,1 | 52,7 ± 4,1 | 24,9 ± 1,4 | 28,2 ± 2,8 | 23,8 ± 3,3 | 41,3 ± 10,5 |
+| Fashion-MNIST | hybrid | 479,9 ± 14,0 | 104,3 ± 1,2 | 45,4 ± 1,0 | 45,7 ± 1,9 | 41,7 ± 3,6 | 41,5 ± 15,2 |
+| Fashion-MNIST | classical | 493,4 ± 8,7 | 105,6 ± 1,2 | 45,1 ± 0,7 | 44,7 ± 1,1 | 40,4 ± 3,4 | 43,0 ± 17,3 |
+| Fashion-MNIST | no_entanglement | 481,6 ± 14,0 | 104,8 ± 1,7 | 45,2 ± 1,0 | 46,1 ± 1,4 | 42,1 ± 3,7 | 39,7 ± 14,0 |
+| KMNIST | hybrid | 1183,6 ± 16,4 | 371,9 ± 28,5 | 211,7 ± 12,2 | 216,8 ± 11,4 | 212,0 ± 13,2 | 182,9 ± 18,5 |
+| KMNIST | classical | 1186,3 ± 16,2 | 372,8 ± 24,7 | 210,9 ± 9,9 | 218,1 ± 9,2 | 212,0 ± 11,9 | 186,5 ± 7,9 |
+| KMNIST | no_entanglement | 1182,8 ± 17,6 | 372,5 ± 28,9 | 212,1 ± 12,3 | 219,0 ± 11,2 | 213,5 ± 13,4 | 188,3 ± 18,8 |
+| PneumoniaMNIST | hybrid | 116,2 ± 6,0 | 31,6 ± 5,3 | 7,1 ± 2,9 | 6,1 ± 2,6 | 5,2 ± 1,5 | 105,4 ± 88,5 |
+| PneumoniaMNIST | classical | 118,0 ± 6,7 | 32,1 ± 5,5 | 7,1 ± 2,9 | 6,0 ± 2,5 | 5,2 ± 1,4 | 96,2 ± 71,2 |
+| PneumoniaMNIST | no_entanglement | 116,1 ± 6,0 | 31,5 ± 5,3 | 7,1 ± 2,9 | 6,0 ± 2,5 | 5,3 ± 1,5 | 107,2 ± 90,9 |
+
+Estudantes do teacher híbrido, FID-like em 1 passo (hybrid / classical / surrogate):
+MNIST 28,0 / 28,0 / 28,0; Fashion-MNIST 45,1 / 45,7 / 45,2; KMNIST 216,3 / 216,8 /
+216,3; PneumoniaMNIST 5,8 / 6,1 / 5,8. Tempo de 1 passo para 512 amostras: ~11 ms
+com circuito simulado (teacher ou estudante hybrid), ~1,3 ms clássico, ~2,2 ms
+surrogate, nos quatro datasets.
+
+Achados:
+
+- **A destilação generaliza.** Nos quatro datasets, o estudante em 1 passo fica no
+  nível do teacher completo de 32 passos e muito à frente do teacher em 1–4 passos.
+  O critério de avanço proposto é atendido nas três seeds em todos os datasets por
+  estudantes hybrid, classical e surrogate do teacher híbrido (em 4 passos no MNIST;
+  em 1–8 no Fashion-MNIST e KMNIST; em 1–2 no PneumoniaMNIST).
+- **O circuito no teacher não faz diferença.** Teachers hybrid, classical e
+  no_entanglement têm curvas DDIM indistinguíveis em todos os datasets (diferenças
+  muito menores que o desvio entre seeds), e os estudantes clássicos destilados de
+  cada um também. O teacher clássico é ~7x mais rápido por passo.
+- **O circuito no estudante não faz diferença.** Confirmado nos três datasets novos.
+- **Consequência:** nesta arquitetura (ramo de 4 qubits somado a um backbone MLP
+  clássico), o pipeline totalmente clássico iguala o híbrido em qualidade em todo
+  ponto medido, com custo menor. Não há contribuição mensurável do circuito, nem com
+  entrelaçamento. Isso é um resultado sobre esta arquitetura e escala, não sobre
+  circuitos em geral.
+- **Mais passos no estudante:** degradação forte no PneumoniaMNIST (FID-like ~100 em
+  32 passos, desvio ~80) e moderada no MNIST; no KMNIST os estudantes melhoram com
+  mais passos. Não investigado.
+- **KMNIST:** o teacher completo passa no gate mas tem FID-like ~212, alto em termos
+  absolutos; a qualidade generativa ali é fraca para todos os modelos, provavelmente
+  limitada pelo AE de latente 16 ou pela capacidade do denoiser (não testado).
+
+Limitações adicionais: os tempos do PneumoniaMNIST foram reavaliados com a GPU
+livre depois do treino; os treinos rodaram em paralelo e seus tempos de parede não
+são benchmark. Controle do teacher sem estudantes hybrid/surrogate (só classical).

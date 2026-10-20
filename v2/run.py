@@ -19,6 +19,7 @@ def finite(loss):
 def load(path,device): return torch.load(path,map_location=device,weights_only=True)
 def write(path,value): path.write_text(json.dumps(value,indent=2)+'\n')
 def net(c,kind): return Network(c['latent'],c['hidden'],c['qubits'],c['depth'],kind)
+def teacher_kind(c): return c.get('teacher_kind','hybrid')  # pilot configs/checkpoints predate this key
 def data(c):
     if c['dataset']=='bars_stripes': return BarsAndStripes(c['max_samples'],seed=c['seed'])
     from src.datasets import build_dataset
@@ -46,19 +47,19 @@ def latents(c,out,loader,device):
     return z,model,checkpoint
 
 def train_teacher(c,out,z,device,schedule):
-    model=net(c,'hybrid').to(device); opt=torch.optim.AdamW(model.parameters(),lr=1e-3); losses=[]
+    model=net(c,teacher_kind(c)).to(device); opt=torch.optim.AdamW(model.parameters(),lr=1e-3); losses=[]
     for _ in range(c['teacher_epochs']):
         for batch in z[torch.randperm(len(z),device=device)].split(c['batch']):
             t,_=schedule.pairs(len(batch)); noisy,eps=schedule.noise(batch,t); a,b=schedule.coeff(t)
             loss=F.mse_loss(model(noisy,t,schedule),a*eps-b*batch)
             finite(loss); opt.zero_grad(); loss.backward(); opt.step(); losses.append(float(loss.detach()))
-    torch.save({'state':model.state_dict(),'signature':config_signature(c),'prediction':'v','ae_source':sha(out/'autoencoder.pt')},out/'teacher.pt')
+    torch.save({'state':model.state_dict(),'signature':config_signature(c),'prediction':'v','kind':teacher_kind(c),'ae_source':sha(out/'autoencoder.pt')},out/'teacher.pt')
     write(out/'teacher_training.json',{'losses':losses,'parameters':parameter_counts(model)})
 
 def get_teacher(c,out,device):
     checkpoint=load(out/'teacher.pt',device)
-    if checkpoint['signature']!=config_signature(c) or checkpoint['prediction']!='v' or checkpoint.get('ae_source')!=sha(out/'autoencoder.pt'): raise ValueError('teacher config mismatch')
-    model=net(c,'hybrid').to(device); model.load_state_dict(checkpoint['state']); model.eval(); model.requires_grad_(False)
+    if checkpoint['signature']!=config_signature(c) or checkpoint['prediction']!='v' or checkpoint.get('kind','hybrid')!=teacher_kind(c) or checkpoint.get('ae_source')!=sha(out/'autoencoder.pt'): raise ValueError('teacher config mismatch')
+    model=net(c,teacher_kind(c)).to(device); model.load_state_dict(checkpoint['state']); model.eval(); model.requires_grad_(False)
     return model
 
 def train_student(c,out,z,device,schedule,kind):
@@ -91,7 +92,7 @@ def evaluate(c,out,device,schedule,classifier_path=None):
         from src.eval_metrics import SmallClassifier,real_reference_features,evaluate_generated_samples
         classifier=SmallClassifier().to(device); classifier.load_state_dict(load(classifier_path,device)); classifier.eval()
         real=real_reference_features(classifier,c['dataset'],device)
-    rows=[]
+    rows=[]; circuit=lambda name:(teacher_kind(c) if name=='teacher' else name) in ('hybrid','no_entanglement')
     for name,model,is_teacher in models:
         for steps in c['evaluation_steps']:
             # Same random draws in every timing repeat; random cost is included.
@@ -102,8 +103,8 @@ def evaluate(c,out,device,schedule,classifier_path=None):
                     return decoder.decode(latent*checkpoint['std']+checkpoint['mean'])
             images,timing=synchronized_time(generate,device)
             rows.append({'model':name,'steps':steps,'samples':len(images),'parameters':sum(p.numel() for p in model.parameters()),
-                         'quantum_circuit_evaluations_per_sample':steps if name in ('teacher','hybrid','no_entanglement') else 0,
-                         'quantum_circuit_evaluations_total':steps*len(images) if name in ('teacher','hybrid','no_entanglement') else 0,
+                         'quantum_circuit_evaluations_per_sample':steps if circuit(name) else 0,
+                         'quantum_circuit_evaluations_total':steps*len(images) if circuit(name) else 0,
                          'hardware_shots':None,'hardware_noise':False,'simulation':'exact statevector or algebraic/classical',
                          'pixel_variance':float(images.var(0).mean()),'timing':timing})
             if classifier is not None: rows[-1].update(evaluate_generated_samples(classifier,images,real,device))

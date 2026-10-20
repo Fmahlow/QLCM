@@ -1,0 +1,8 @@
+{
+  "checkpoint_sha256": "7395233adb285d62c7b70fdbd06a867f9d212919bb5a72249d4005d641dabefd",
+  "dataset": "fashion_mnist",
+  "heldout": true,
+  "test_accuracy": 0.8889,
+  "samples": 10000,
+  "real_mean_confidence": 0.884825998878479
+}

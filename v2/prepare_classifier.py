@@ -13,7 +13,7 @@ from src.datasets import build_dataset
 
 def main():
     p=argparse.ArgumentParser()
-    p.add_argument('--dataset',choices=['mnist','fashion_mnist'],default='mnist')
+    p.add_argument('--dataset',choices=['mnist','fashion_mnist','kmnist','pneumoniamnist'],default='mnist')
     p.add_argument('--output',required=True)
     p.add_argument('--epochs',type=int,default=3)
     p.add_argument('--max-samples',type=int,default=10000)

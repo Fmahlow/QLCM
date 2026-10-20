@@ -1,0 +1,8 @@
+{
+  "checkpoint_sha256": "25c76281795209ffe3389a6928c065319082da1b75dc6533fbf4c1af4b123f6a",
+  "dataset": "kmnist",
+  "heldout": true,
+  "test_accuracy": 0.9314,
+  "samples": 10000,
+  "real_mean_confidence": 0.9503518327713013
+}

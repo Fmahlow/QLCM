@@ -1,0 +1,13 @@
+{
+  "checkpoint_sha256": "61005bc04f9911f0b672a0fffc98284834b73c229781c32f2df164f91a3399dc",
+  "dataset": "pneumoniamnist",
+  "heldout": true,
+  "test_accuracy": 0.8269230769230769,
+  "samples": 624,
+  "real_mean_confidence": 0.9370882327740009,
+  "train_label_counts": [
+    1214,
+    3494
+  ],
+  "train_label_entropy": 0.570805549621582
+}
