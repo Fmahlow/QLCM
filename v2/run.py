@@ -43,7 +43,8 @@ def train_ae(c,out,loader,device):
     write(out/'ae_training.json',{'losses':losses,'latent_std_min':float(std.min())})
 def latents(c,out,loader,device):
     checkpoint=load(out/'autoencoder.pt',device)
-    if checkpoint['signature']!=config_signature(c): raise ValueError('AE config signature mismatch')
+    # The AE does not depend on denoiser size, so only its own keys must match (lets sweeps reuse one AE).
+    if any(checkpoint['signature'][k]!=c[k] for k in ('dataset','max_samples','latent','seed')): raise ValueError('AE config signature mismatch')
     model=ae(c).to(device); model.load_state_dict(checkpoint['state']); model.eval(); model.requires_grad_(False)
     with torch.no_grad(): z=torch.cat([(model.encode(x.to(device))-checkpoint['mean'])/checkpoint['std'] for x,_ in loader])
     return z,model,checkpoint
