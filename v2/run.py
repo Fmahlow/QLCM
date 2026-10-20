@@ -18,7 +18,7 @@ def finite(loss):
     if not torch.isfinite(loss): raise RuntimeError('nonfinite loss; stop before checkpoint')
 def load(path,device): return torch.load(path,map_location=device,weights_only=True)
 def write(path,value): path.write_text(json.dumps(value,indent=2)+'\n')
-def net(c,kind): return Network(c['latent'],c['hidden'],c['qubits'],c['depth'],kind)
+def net(c,kind): return Network(c['latent'],c['hidden'],c['qubits'],c['depth'],kind,c.get('reupload',False))
 def teacher_kind(c): return c.get('teacher_kind','hybrid')  # pilot configs/checkpoints predate this key
 def data(c):
     if c['dataset']=='bars_stripes': return BarsAndStripes(c['max_samples'],seed=c['seed'])
@@ -27,7 +27,9 @@ def data(c):
 def ae(c):
     return MlpAutoencoder(8,c['latent']) if c['dataset']=='bars_stripes' else ConvAutoencoder(c['latent'])
 def config_signature(c):
-    return {k:c[k] for k in ('dataset','max_samples','latent','hidden','qubits','depth','timesteps','seed')}
+    signature={k:c[k] for k in ('dataset','max_samples','latent','hidden','qubits','depth','timesteps','seed')}
+    if c.get('reupload'): signature['reupload']=True  # key absent in older checkpoints
+    return signature
 def train_ae(c,out,loader,device):
     model=ae(c).to(device); opt=torch.optim.AdamW(model.parameters(),lr=1e-3)
     losses=[]
@@ -79,7 +81,7 @@ def train_student(c,out,z,device,schedule,kind):
 def evaluate(c,out,device,schedule,classifier_path=None):
     _,decoder,checkpoint=latents(c,out,DataLoader(data(c),batch_size=c['batch']),device)
     teacher=get_teacher(c,out,device); models=[('teacher',teacher,True)]
-    for kind in ('hybrid','classical','no_entanglement','surrogate'):
+    for kind in ('hybrid','classical','no_entanglement','surrogate','classical_branch'):
         path=out/f'student_{kind}.pt'
         if not path.exists(): continue
         saved=load(path,device)
@@ -114,7 +116,7 @@ def evaluate(c,out,device,schedule,classifier_path=None):
 def main():
     p=argparse.ArgumentParser(); p.add_argument('--config',default=str(ROOT/'v2/smoke.json'))
     p.add_argument('--stage',choices=['smoke','ae','teacher','distill','eval','dry-run'],required=True)
-    p.add_argument('--output',required=True); p.add_argument('--kind',choices=['hybrid','classical','no_entanglement','surrogate'],default='hybrid'); p.add_argument('--classifier')
+    p.add_argument('--output',required=True); p.add_argument('--kind',choices=['hybrid','classical','no_entanglement','surrogate','classical_branch'],default='hybrid'); p.add_argument('--classifier')
     args=p.parse_args(); c=json.loads(Path(args.config).read_text()); torch.manual_seed(c['seed']); torch.set_num_threads(2)
     device=torch.device(c['device']); schedule=Schedule(c['timesteps'],device); out=Path(args.output)
     if args.stage=='dry-run':

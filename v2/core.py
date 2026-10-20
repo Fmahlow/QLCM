@@ -35,12 +35,15 @@ class Schedule:
 class QuantumFeatures(nn.Module):
     """RY/RZ/CZ circuit with final basis mixing, exact statevector expectations.
     Separable control changes only entangling gates. No shot/hardware model.
+    Data-independent gates are fused into one matrix per forward; `reference`
+    keeps the gate-by-gate simulation for tests. With reupload, the encoding
+    gates are repeated before every trainable layer.
     """
-    def __init__(self, qubits=4, depth=2, entangle=True):
+    def __init__(self, qubits=4, depth=2, entangle=True, reupload=False):
         super().__init__()
         if qubits < 2 or depth < 1:
             raise ValueError('qubits>=2 and depth>=1 required')
-        self.qubits,self.depth,self.entangle = qubits,depth,entangle
+        self.qubits,self.depth,self.entangle,self.reupload = qubits,depth,entangle,reupload
         self.weights = nn.Parameter(torch.randn(depth,qubits,2)*0.1)
         basis = torch.arange(2**qubits)
         bits = ((basis[:,None] >> torch.arange(qubits-1,-1,-1))&1)
@@ -57,13 +60,50 @@ class QuantumFeatures(nn.Module):
             g = torch.stack([c,-s,s,c],-1).reshape(batch,2,2).to(torch.complex64)
         x = torch.einsum('bij,bkj->bki',g,x.reshape(batch,-1,2))
         return x.reshape([batch]+[2]*self.qubits).movedim(-1,wire+1).reshape(batch,-1)
-    def forward(self, x):
-        state = torch.zeros(x.shape[0],2**self.qubits,device=x.device,dtype=torch.complex64)
-        state[:,0] = 1
+    def encode(self, state, x):
         for w in range(self.qubits):
             state=self.gate(state,x[:,w],w)
             state=self.gate(state,x[:,w+self.qubits],w,True)
+        return state
+    @staticmethod
+    def single_qubit(ry, rz):
+        # RZ(rz) @ RY(ry), transposed for the row-state convention (state @ matrix).
+        c,s=torch.cos(ry/2),torch.sin(ry/2); m,p=torch.exp(-.5j*rz),torch.exp(.5j*rz)
+        return torch.stack([torch.stack([c*m,s*p],-1),torch.stack([-s*m,c*p],-1)],-2)
+    def kron(self, mats):
+        out=mats[0]
+        for m in mats[1:]: out=(out[:,None,:,None]*m[None,:,None,:]).reshape(out.shape[0]*2,-1)
+        return out
+    def layer_matrix(self, layer, device=None):
+        # Row i is the layer applied to basis state i, so a batch of states maps as state @ matrix.
+        mats=self.single_qubit(self.weights[layer,:,0],self.weights[layer,:,1])
+        matrix=self.kron(list(mats))
+        return matrix*self.cz if self.entangle else matrix
+    def mixing_matrix(self, device=None):
+        ry=torch.full((self.qubits,),math.pi/4,device=self.weights.device)
+        return self.kron(list(self.single_qubit(ry,torch.zeros_like(ry))))
+    def product_state(self, x):
+        theta,phi=x[:,:self.qubits],x[:,self.qubits:]
+        amps=torch.stack([torch.cos(theta/2)*torch.exp(-.5j*phi),torch.sin(theta/2)*torch.exp(.5j*phi)],-1)
+        state=amps[:,0]
+        for w in range(1,self.qubits): state=(state[:,:,None]*amps[:,w,None,:]).reshape(x.shape[0],-1)
+        return state
+    def forward(self, x):
+        layers=[self.layer_matrix(l,x.device) for l in range(self.depth)]; mixing=self.mixing_matrix(x.device)
+        if self.reupload:
+            state=self.product_state(x)@layers[0]
+            for layer in layers[1:]: state=self.encode(state,x)@layer
+            state=state@mixing
+        else:
+            fused=mixing
+            for layer in reversed(layers): fused=layer@fused
+            state=self.product_state(x)@fused
+        return state.abs().square()@self.signs
+    def reference(self, x):
+        state = torch.zeros(x.shape[0],2**self.qubits,device=x.device,dtype=torch.complex64)
+        state[:,0] = 1
         for layer in range(self.depth):
+            if layer==0 or self.reupload: state=self.encode(state,x)
             for w in range(self.qubits):
                 state=self.gate(state,self.weights[layer,w,0].expand(x.shape[0]),w)
                 state=self.gate(state,self.weights[layer,w,1].expand(x.shape[0]),w,True)
@@ -74,38 +114,52 @@ class QuantumFeatures(nn.Module):
         return state.abs().square()@self.signs
 
 class SeparableSurrogate(nn.Module):
-    """Exact algebraic substitute for QuantumFeatures(entangle=False), all depths."""
-    def __init__(self, qubits=4, depth=2):
+    """Exact algebraic substitute for QuantumFeatures(entangle=False), all depths, with or without reupload."""
+    def __init__(self, qubits=4, depth=2, reupload=False):
         super().__init__()
-        self.qubits=qubits
+        self.qubits,self.reupload=qubits,reupload
         self.weights=nn.Parameter(torch.randn(depth,qubits,2)*.1)
+    @staticmethod
+    def rotate(b,ry,rz):
+        bx,by,bz=b
+        cy,sy=torch.cos(ry),torch.sin(ry); bx,bz=cy*bx+sy*bz,-sy*bx+cy*bz
+        cz,sz=torch.cos(rz),torch.sin(rz); bx,by=cz*bx-sz*by,sz*bx+cz*by
+        return bx,by,bz
     def forward(self,x):
         q=self.qubits
-        bx=torch.sin(x[:,:q])*torch.cos(x[:,q:]); by=torch.sin(x[:,:q])*torch.sin(x[:,q:]); bz=torch.cos(x[:,:q])
-        for weights in self.weights:
-            cy,sy=torch.cos(weights[:,0]),torch.sin(weights[:,0])
-            bx,bz=cy*bx+sy*bz,-sy*bx+cy*bz
-            cz,sz=torch.cos(weights[:,1]),torch.sin(weights[:,1])
-            bx,by=cz*bx-sz*by,sz*bx+cz*by
-        return (bz-bx)/math.sqrt(2)
+        b=(torch.sin(x[:,:q])*torch.cos(x[:,q:]),torch.sin(x[:,:q])*torch.sin(x[:,q:]),torch.cos(x[:,:q]))
+        for layer,weights in enumerate(self.weights):
+            if layer and self.reupload: b=self.rotate(b,x[:,:q],x[:,q:])
+            b=self.rotate(b,weights[:,0],weights[:,1])
+        return (b[2]-b[0])/math.sqrt(2)
+
+class ClassicalBranch(nn.Module):
+    """Classical control for the circuit block: same input/output shapes and range, cross-feature interactions."""
+    def __init__(self, qubits=4):
+        super().__init__(); self.layer=nn.Sequential(nn.Linear(2*qubits,qubits),nn.Tanh())
+    def forward(self,x): return self.layer(x)
 
 class Network(nn.Module):
-    def __init__(self, latent=16, hidden=64, qubits=4, depth=2, kind='hybrid'):
+    """hidden=0 removes the MLP backbone, leaving only compressor -> branch -> readout."""
+    def __init__(self, latent=16, hidden=64, qubits=4, depth=2, kind='hybrid', reupload=False):
         super().__init__()
         self.kind=kind
-        self.backbone=nn.Sequential(nn.Linear(latent+3,hidden),nn.SiLU(),nn.Linear(hidden,hidden),nn.SiLU(),nn.Linear(hidden,latent))
+        if kind not in ('classical','hybrid','no_entanglement','surrogate','classical_branch'): raise ValueError(kind)
+        if hidden==0 and kind=='classical': raise ValueError('classical network needs hidden>0')
+        self.backbone=nn.Sequential(nn.Linear(latent+3,hidden),nn.SiLU(),nn.Linear(hidden,hidden),nn.SiLU(),nn.Linear(hidden,latent)) if hidden else None
         if kind != 'classical':
-            if kind not in ('hybrid','no_entanglement','surrogate'):
-                raise ValueError(kind)
             self.compressor=nn.Sequential(nn.Linear(latent+3,2*qubits),nn.Tanh())
-            self.quantum=(SeparableSurrogate(qubits,depth) if kind=='surrogate' else QuantumFeatures(qubits,depth,kind=='hybrid'))
+            self.quantum=(SeparableSurrogate(qubits,depth,reupload) if kind=='surrogate' else ClassicalBranch(qubits) if kind=='classical_branch'
+                          else QuantumFeatures(qubits,depth,kind=='hybrid',reupload))
             self.readout=nn.Linear(qubits,latent)
+    def branch(self,features):
+        return self.readout(self.quantum(math.pi*self.compressor(features)))
     def forward(self,z,t,schedule):
         u=t.float()/schedule.steps
         features=torch.cat([z,u[:,None],torch.sin(math.pi*u)[:,None],torch.cos(math.pi*u)[:,None]],-1)
-        y=self.backbone(features)
+        y=self.backbone(features) if self.backbone is not None else 0
         if self.kind!='classical':
-            y=y+self.readout(self.quantum(math.pi*self.compressor(features)))
+            y=y+self.branch(features)
         return y
 
 class Student(nn.Module):

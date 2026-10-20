@@ -40,4 +40,21 @@ class CoreTests(unittest.TestCase):
         counts=parameter_counts(model); self.assertEqual(counts['trainable'],counts['with_gradient'])
         _,stats=synchronized_time(lambda:torch.ones(2),'cpu',1,3)
         self.assertEqual(len(stats['seconds']),3); self.assertGreater(stats['median_seconds'],0)
+    def test_fused_circuit_and_reupload_controls(self):
+        x=torch.randn(9,8)
+        for reupload in (False,True):
+            for entangle in (False,True):
+                q=QuantumFeatures(4,3,entangle,reupload); torch.testing.assert_close(q(x),q.reference(x),atol=2e-6,rtol=2e-5)
+                g1=torch.autograd.grad(q(x).sum(),q.weights); g2=torch.autograd.grad(q.reference(x).sum(),q.weights)
+                torch.testing.assert_close(g1[0],g2[0],atol=2e-6,rtol=2e-5)
+            q=QuantumFeatures(4,3,False,reupload); surrogate=SeparableSurrogate(4,3,reupload); surrogate.load_state_dict({'weights':q.weights.detach()})
+            torch.testing.assert_close(q(x),surrogate(x),atol=2e-6,rtol=2e-5)
+        plain=QuantumFeatures(4,3,True,False); again=QuantumFeatures(4,3,True,True); again.load_state_dict(plain.state_dict())
+        self.assertGreater(float((plain(x)-again(x)).abs().max().detach()),1e-3)
+    def test_branch_only_and_classical_branch(self):
+        s=Schedule(8); z=torch.randn(5,4); t=torch.randint(1,9,(5,))
+        for kind in ('hybrid','surrogate','classical_branch'):
+            m=Network(4,0,3,2,kind); self.assertIsNone(m.backbone); m(z,t,s).sum().backward()
+            self.assertTrue(all(p.grad is not None for p in m.parameters()))
+        with self.assertRaises(ValueError): Network(4,0,3,2,'classical')
 if __name__=='__main__': unittest.main()

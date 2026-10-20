@@ -109,3 +109,57 @@ Tectonic já existia; compilador nativo falhou ao input multifile (não suportad
 com warnings overfull no TikZ. Nenhum TeX instalado. Compilar cópia temporária do
 projeto com ferramenta existente se recursos cached disponíveis; diagnosticar sem
 reescrever artigo histórico ou retirar evidências para forçar compilação.
+
+## Pré-registro da extensão "onde o circuito importa" — 2026-10-20
+
+Escrito antes de rodar qualquer experimento abaixo. Fora do protocolo do piloto.
+Comum a todos: seeds 0/1/2; AE de latente 16 de cada dataset/seed reaproveitado da
+campanha `results/v2-campaign-datasets-teachers` (exceto E4b); estudantes com 200
+épocas / EMA 0,95; demais hiperparâmetros de `v2/gpu_pilot.json`; 512 amostras;
+FID-like do classificador validado de cada dataset. Sem gate de teacher: todos os
+modelos são avaliados. Treinos na CPU (2 threads por processo, em paralelo);
+avaliações finais em sequência na GPU. Mudança de implementação: o circuito agora
+funde as portas independentes dos dados numa matriz (mesma função; testes comparam
+com a simulação porta a porta; reavaliar checkpoints antigos dá métricas idênticas).
+
+Controles novos: `classical_branch` troca o circuito por Linear(2q,q)+Tanh com a
+mesma entrada, saída e faixa (36 parâmetros contra 16 do circuito de 4 qubits e
+profundidade 2: o controle tem mais parâmetros, o que é conservador para o
+circuito). `hidden=0` remove o backbone MLP: o modelo vira compressor -> ramo ->
+readout. `surrogate` continua sendo o equivalente exato sem entrelaçamento.
+
+**E0: contribuição do ramo nos modelos existentes.** Para teachers e estudantes
+com ramo da campanha (4 datasets): razão RMS ramo/backbone ao longo de t e FID-like
+com o readout zerado. Descritivo, sem critério.
+
+**E1: varredura de capacidade (MNIST e Fashion-MNIST).** Pipeline casado: teacher
+e estudante do mesmo tipo e tamanho. Tipos hybrid, surrogate e classical_branch
+com hidden em {0,4,8,16,32,128}; classical com hidden em {2,4,8,16,32,128}. Métrica
+primária: FID-like do estudante em 1 passo; secundária: teacher em 32 passos.
+Critérios por dataset e hidden, pareados por seed:
+- *circuito contribui*: hybrid melhor que classical_branch nas 3 seeds e média ao
+  menos 10% menor;
+- *entrelaçamento contribui*: hybrid melhor que surrogate nas 3 seeds e média ao
+  menos 10% menor;
+- fronteira: FID-like contra parâmetros registrados, hybrid comparado ao melhor
+  classical com igual ou menos parâmetros (descritivo).
+
+**E2: escala do circuito (MNIST, hidden=0).** qubits em {4,6,8}, profundidade em
+{2,4}, re-uploading sim/não; hybrid e surrogate em todas as combinações,
+classical_branch por número de qubits. Mesmos critérios do E1 por configuração.
+Tendência com qubits é descritiva.
+
+**E3: shots finitos e ruído, só na inferência.** Modelos treinados sem ruído:
+pipeline hybrid hidden=128 da campanha e hidden=0 do E1 (MNIST). Ruído
+despolarizante local com p em {0, 0,001, 0,01, 0,03} por qubit após cada camada
+(codificação e cada camada treinável); shots por avaliação de circuito em
+{exato, 1024, 256, 64}. Teacher em {4,8,32} passos, estudante em {1,2,4}. Comparação
+principal: FID-like contra total de shots por amostra (passos x shots). Hipótese:
+com o mesmo total de shots, o estudante de 1 passo é melhor que o teacher.
+Descritivo; a robustez só é informativa onde o E0/E1 mostram que o ramo pesa.
+
+**E4: pendências.** (a) Por que estudantes pioram com mais passos: erro do
+estudante f(z_t,t) contra o endpoint da trajetória DDIM completa do teacher a partir
+de z_t, por t, em MNIST e PneumoniaMNIST. (b) KMNIST: FID-like de reconstrução do AE
+para latente 16; AEs de latente 32 e 64, com teacher hybrid hidden=128 e estudante
+classical. Ambos descritivos.
