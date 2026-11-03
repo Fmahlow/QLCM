@@ -16,4 +16,4 @@ python analysis/make_assets.py      # needs numpy, scipy, matplotlib
 tectonic -X compile main.tex
 ```
 
-Open items before submission are listed in `TODO.md` (added after review).
+Open items before submission (GPU runs and manual checks) are listed in `TODO.md`.

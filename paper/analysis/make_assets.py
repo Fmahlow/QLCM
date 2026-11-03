@@ -63,6 +63,21 @@ def pooled(pairs):
     return ratio_ci(t, c)
 
 
+def cluster_ci(cells):
+    """Cell- (or dataset-) clustered interval: mean paired log-ratio per cell, t-interval across cells."""
+    means = np.array([np.mean([math.log(t[s] / c[s]) for s in sorted(set(t) & set(c))]) for t, c in cells])
+    k = len(means); m = means.mean(); se = means.std(ddof=1) / math.sqrt(k); tc = stats.t.ppf(0.95, k - 1)
+    pct = lambda x: 100 * (math.exp(x) - 1)
+    return {'k': k, 'mean_pct': pct(m), 'lo_pct': pct(m - tc * se), 'hi_pct': pct(m + tc * se),
+            'equivalent': bool(m - tc * se > -MARGIN and m + tc * se < MARGIN)}
+
+
+def ptxt(p): return '$<$0.001' if p < 0.001 else f'{p:.3f}'
+
+
+def ci_txt(e): return f"[{e['lo_pct']:+.1f}\\%, {e['hi_pct']:+.1f}\\%]"
+
+
 def clean_log(ax, x=False):
     from matplotlib.ticker import FuncFormatter, NullFormatter, LogLocator
     f = FuncFormatter(lambda v, _: f'{v:g}')
@@ -126,11 +141,33 @@ EQLAB = {'teacher32_hybrid_vs_classical': ('Teacher, 32 steps', 'hybrid vs.\\ cl
          'student1_hybrid_vs_classical': ('Student, 1 step', 'hybrid vs.\\ classical student'),
          'student1_hybrid_vs_surrogate': ('Student, 1 step', 'hybrid vs.\\ separable surrogate'),
          'student1_classical_from_hybrid_vs_from_classical_teacher': ('Student, 1 step', 'classical student: hybrid vs.\\ classical teacher')}
+EQKEYS = {'teacher32_hybrid_vs_classical': ((lambda d: (d, 'hybrid', 'teacher', 32)), (lambda d: (d, 'classical', 'teacher', 32))),
+          'teacher32_hybrid_vs_noent': ((lambda d: (d, 'hybrid', 'teacher', 32)), (lambda d: (d, 'no_entanglement', 'teacher', 32))),
+          'student1_hybrid_vs_classical': ((lambda d: (d, 'hybrid', 'hybrid', 1)), (lambda d: (d, 'hybrid', 'classical', 1))),
+          'student1_hybrid_vs_surrogate': ((lambda d: (d, 'hybrid', 'hybrid', 1)), (lambda d: (d, 'hybrid', 'surrogate', 1))),
+          'student1_classical_from_hybrid_vs_from_classical_teacher': ((lambda d: (d, 'hybrid', 'classical', 1)), (lambda d: (d, 'classical', 'classical', 1))),
+          'student1_vs_teacher32': ((lambda d: (d, 'hybrid', 'hybrid', 1)), (lambda d: (d, 'hybrid', 'teacher', 32)))}
+for k, (a, b) in EQKEYS.items():
+    eq[k + '/by_dataset'] = cluster_ci([(C[a(d)], C[b(d)]) for d in DATASETS])
+    exk = []
+    for d in DATASETS:
+        if d != 'kmnist': exk += [(C[a(d)][x], C[b(d)][x]) for x in sorted(C[a(d)])]
+    eq[k + '/excl_kmnist'] = pooled(exk)
+    eq[k + '/max_abs_pct'] = max(abs(eq[k]['lo_pct']), abs(eq[k]['hi_pct']), abs(eq[k + '/by_dataset']['lo_pct']), abs(eq[k + '/by_dataset']['hi_pct']))
 rows = []
 for k, (role, lab) in EQLAB.items():
-    e = eq[k]
-    rows.append(f"{role} & {lab} & {e['n']} & {e['mean_pct']:+.1f}\\% & [{e['lo_pct']:+.1f}\\%, {e['hi_pct']:+.1f}\\%] & {e['tost_p']:.3f} & {'yes' if e['equivalent'] else 'no'}" + r' \\')
+    e, dd, ex = eq[k], eq[k + '/by_dataset'], eq[k + '/excl_kmnist']
+    rows.append(f"{role} & {lab} & {e['mean_pct']:+.1f}\\% & {ci_txt(e)} & {ptxt(e['tost_p'])} & {ci_txt(dd)} & {ci_txt(ex)}" + r' \\')
 (GEN / 'tab_equivalence.tex').write_text('\n'.join(rows) + '\n')
+# Student (1 step) vs 32-step teacher, per dataset: ratio of geometric means and seeds within 10%
+rows = []
+for d in DATASETS:
+    e = ratio_ci(C[(d, 'hybrid', 'hybrid', 1)], C[(d, 'hybrid', 'teacher', 32)])
+    e4 = ratio_ci(C[(d, 'hybrid', 'hybrid', 4)], C[(d, 'hybrid', 'teacher', 32)])
+    within = lambda st: sum(C[(d, 'hybrid', 'hybrid', st)][x] <= 1.1 * C[(d, 'hybrid', 'teacher', 32)][x] for x in range(3))
+    rows.append(f"{DNAME[d]} & {e['mean_pct']:+.1f}\\% & {ci_txt(e)} & {within(1)}/3 & {e4['mean_pct']:+.1f}\\% & {within(4)}/3" + r' \\')
+    eq[f'student1_vs_teacher32/{d}'] = e; eq[f'student4_vs_teacher32/{d}'] = e4
+(GEN / 'tab_student_teacher.tex').write_text('\n'.join(rows) + '\n')
 
 # Figure: FID-like vs steps, per dataset (hybrid teacher and its students)
 fig, axes = plt.subplots(1, 4, figsize=(7.0, 1.9))
@@ -203,8 +240,8 @@ for d in ('mnist', 'fashion_mnist'):
         cl = ALL.get((d, 'classical', h, 4, 2, False, 'student', 1), {})
         vc, gc = verdict(g('hybrid'), g('classical_branch')); ve, ge = verdict(g('hybrid'), g('surrogate'))
         crit['e1']['circuit'].append(vc); crit['e1']['entanglement'].append(ve)
-        forest.append((f"E1 {DNAME[d]} h={h}", 'circuit', ratio_ci(g('hybrid'), g('classical_branch'))))
-        forest.append((f"E1 {DNAME[d]} h={h}", 'entanglement', ratio_ci(g('hybrid'), g('surrogate'))))
+        forest.append((f"E1 {DNAME[d]} h={h}" + (' (= E2 q=4 d=2)' if (d, h) == ('mnist', 0) else ''), 'circuit', ratio_ci(g('hybrid'), g('classical_branch'))))
+        forest.append((f"E1 {DNAME[d]} h={h}" + (' (= E2 q=4 d=2)' if (d, h) == ('mnist', 0) else ''), 'entanglement', ratio_ci(g('hybrid'), g('surrogate'))))
         rows.append(f"{DNAME[d] if h == 0 else ''} & {h} & {PALL.get((d, 'hybrid', h, 4, 2, False, 'student', 1), '---')} & "
                     f"{fmt(list(g('hybrid').values()))} & {fmt(list(g('surrogate').values()))} & {fmt(list(g('classical_branch').values()))} & "
                     f"{fmt(list(cl.values())) if cl else '---'} & {1 - gc:.2f}{'$^\\ast$' if vc else ''} & {1 - ge:.2f}{'$^\\ast$' if ve else ''}" + r' \\')
@@ -220,8 +257,9 @@ for q in (4, 6, 8):
             th = E2[('mnist', 'hybrid', 0, q, dp, re, 'teacher', 32)]
             vc, gc = verdict(hy, cb); ve, ge = verdict(hy, su)
             crit['e2']['circuit'].append(vc); crit['e2']['entanglement'].append(ve)
-            forest.append((f"E2 q={q} d={dp}{' RU' if re else ''}", 'circuit', ratio_ci(hy, cb)))
-            forest.append((f"E2 q={q} d={dp}{' RU' if re else ''}", 'entanglement', ratio_ci(hy, su)))
+            if not (q == 4 and dp == 2 and not re):   # same runs as E1 MNIST h=0
+                forest.append((f"E2 q={q} d={dp}{' RU' if re else ''}", 'circuit', ratio_ci(hy, cb)))
+                forest.append((f"E2 q={q} d={dp}{' RU' if re else ''}", 'entanglement', ratio_ci(hy, su)))
             rows.append(f"{q} & {dp} & {'yes' if re else 'no'} & {fmt(list(hy.values()))} & {fmt(list(su.values()))} & {fmt(list(cb.values()))} & "
                         f"{fmt(list(th.values()))} & {1 - gc:.2f}{'$^\\ast$' if vc else ''} & {1 - ge:.2f}{'$^\\ast$' if ve else ''}" + r' \\')
 (GEN / 'tab_e2.tex').write_text('\n'.join(rows) + '\n')
@@ -240,10 +278,10 @@ for ax, d in zip(axes, ('mnist', 'fashion_mnist')):
     ax.set_xticks([1, 2, 4, 8, 16, 32, 128]); ax.set_xticklabels(['0', '2', '4', '8', '16', '32', '128'])
     ax.set_title(DNAME[d]); ax.set_xlabel('backbone width (hidden units; 0 = no backbone)'); clean_log(ax)
 axes[0].set_ylabel('1-step student FID-like'); axes[1].legend(fontsize=6.5)
-save(fig, 'fig_capacity.pdf')
+plt.close(fig)  # superseded by the parameter-axis version below
 
 # Forest plot of all primary comparisons (E1 + E2), ratio hybrid/control with 90% CI
-fig, axes = plt.subplots(1, 2, figsize=(7.0, 5.6), sharey=True)
+fig, axes = plt.subplots(1, 2, figsize=(7.0, 5.4), sharey=True)
 labels = [f[0] for f in forest if f[1] == 'circuit']
 for ax, comp, title in zip(axes, ('circuit', 'entanglement'), ('hybrid / classical branch', 'hybrid / separable surrogate')):
     items = [f for f in forest if f[1] == comp]
@@ -264,6 +302,92 @@ for ax, comp, title in zip(axes, ('circuit', 'entanglement'), ('hybrid / classic
 save(fig, 'fig_forest.pdf')
 S['forest'] = [{'cell': f[0], 'comparison': f[1], **{k: v for k, v in f[2].items() if k != 'log_ratios'}} for f in forest]
 S['forest_any_equivalent'] = sum(f[2]['equivalent'] for f in forest)
+
+# ---------------------------------------------------------------- sweep robustness (added after review)
+# Unique primary cells (E1 MNIST h=0 is the same run as E2 q=4 d=2 without re-uploading).
+st1 = lambda d, kind, h, q=4, dp=2, re=False: ALL[(d, kind, h, q, dp, re, 'student', 1)]
+e1cells = [(d, h) for d in ('mnist', 'fashion_mnist') for h in (0, 4, 8, 16, 32, 128)]
+e2cells = [(q, dp, re) for q in (4, 6, 8) for dp in (2, 4) for re in (False, True) if not (q == 4 and dp == 2 and not re)]
+fam = {
+ 'E1 hybrid/surrogate (12 cells)': [(st1(d, 'hybrid', h), st1(d, 'surrogate', h)) for d, h in e1cells],
+ 'E1 hybrid/classical branch, $h\\ge16$ (6)': [(st1(d, 'hybrid', h), st1(d, 'classical_branch', h)) for d, h in e1cells if h >= 16],
+ 'E1 hybrid/classical branch, $h\\le8$ (6)': [(st1(d, 'hybrid', h), st1(d, 'classical_branch', h)) for d, h in e1cells if h <= 8],
+ 'E2 hybrid/surrogate, no RU (6)': [(st1('mnist', 'hybrid', 0, q, dp, re), st1('mnist', 'surrogate', 0, q, dp, re)) for q, dp, re in [(4, 2, False)] + e2cells if not re],
+ 'E2 hybrid/surrogate, RU (6)': [(st1('mnist', 'hybrid', 0, q, dp, re), st1('mnist', 'surrogate', 0, q, dp, re)) for q, dp, re in e2cells if re],
+ 'E2 hybrid/classical branch, no RU (6)': [(st1('mnist', 'hybrid', 0, q, dp, re), st1('mnist', 'classical_branch', 0, q, 2, False)) for q, dp, re in [(4, 2, False)] + e2cells if not re],
+ 'E2 hybrid/classical branch, RU (6)': [(st1('mnist', 'hybrid', 0, q, dp, re), st1('mnist', 'classical_branch', 0, q, 2, False)) for q, dp, re in e2cells if re],
+}
+rows = []; S['sweep_families'] = {}
+for lab, cells in fam.items():
+    e = cluster_ci(cells); S['sweep_families'][lab] = e
+    rows.append(f"{lab} & {e['mean_pct']:+.1f}\\% & {ci_txt(e)} & {'yes' if e['equivalent'] else 'no'}" + r' \\')
+(GEN / 'tab_sweep_pooled.tex').write_text('\n'.join(rows) + '\n')
+S['unique_primary_cells'] = len(e1cells) + len(e2cells)
+
+# Preregistered parameter frontier: hybrid vs best MLP-only with <= registered parameters (one-step student)
+rows = []; S['frontier'] = []
+for d in ('mnist', 'fashion_mnist'):
+    for h in (0, 4, 8, 16, 32, 128):
+        kh = (d, 'hybrid', h, 4, 2, False, 'student', 1); ph = PALL[kh]; fh = np.mean(list(ALL[kh].values()))
+        opts = [(np.mean(list(ALL[k].values())), k[2], PALL[k]) for k in ALL if k[0] == d and k[1] == 'classical' and k[6:] == ('student', 1) and PALL[k] <= ph]
+        best = min(opts) if opts else None
+        S['frontier'].append({'dataset': d, 'h': h, 'params': ph, 'hybrid': fh, 'best_mlp': best})
+        rows.append(f"{DNAME[d] if h == 0 else ''} & {h} & {ph} & {fh:.1f} & " + (f"{best[1]} ({best[2]}) & {best[0]:.1f} & {'hybrid' if fh < best[0] else 'MLP'}" if best else '--- & --- & ---') + r' \\')
+    rows.append(r'\addlinespace')
+(GEN / 'tab_frontier.tex').write_text('\n'.join(rows[:-1]) + '\n')
+
+# Capacity figure against registered parameters
+fig, axes = plt.subplots(1, 2, figsize=(7.0, 2.3))
+for ax, d in zip(axes, ('mnist', 'fashion_mnist')):
+    for k in ('hybrid', 'surrogate', 'classical_branch', 'classical'):
+        hs = [h for h in (0, 2, 4, 8, 16, 32, 128) if ALL.get((d, k, h, 4, 2, False, 'student', 1))]
+        x = [PALL[(d, k, h, 4, 2, False, 'student', 1)] for h in hs]
+        y = [np.mean(list(ALL[(d, k, h, 4, 2, False, 'student', 1)].values())) for h in hs]
+        e = [np.std(list(ALL[(d, k, h, 4, 2, False, 'student', 1)].values())) for h in hs]
+        ax.errorbar(x, y, yerr=e, color=COL[k], marker=MARK[k], ms=3.5, capsize=1.5, lw=1.2, label=LABEL[k])
+    ax.set_xscale('log'); ax.set_yscale('log'); clean_log(ax, x=True)
+    ax.set_title(DNAME[d]); ax.set_xlabel('registered parameters of the network')
+axes[0].set_ylabel('1-step student FID-like'); axes[1].legend(fontsize=6.5)
+save(fig, 'fig_capacity.pdf')
+
+# Power of the preregistered per-cell rule (3 seeds, all better and mean >= 10% lower), by simulation
+rng = np.random.default_rng(0)
+sds = [0.5 * (math.log(1 + f['hi_pct'] / 100) - math.log(1 + f['lo_pct'] / 100)) / stats.t.ppf(.95, 2) * math.sqrt(3) for f in S['forest']]
+S['cell_logratio_sd'] = {'median': float(np.median(sds)), 'q25': float(np.percentile(sds, 25)), 'q75': float(np.percentile(sds, 75))}
+def power(effect, sd, n=200000):
+    x = rng.normal(math.log(1 - effect), sd, size=(n, 3))   # log(hybrid/control) per seed
+    return float(np.mean((x < 0).all(1) & (np.exp(x).mean(1) <= 0.9)))   # ratio-of-means approx via mean of ratios
+S['power'] = {f'{int(e*100)}%': {'median_sd': power(e, S['cell_logratio_sd']['median']), 'sd_0.20': power(e, 0.20)} for e in (0.0, 0.10, 0.15, 0.20, 0.30)}
+rows = [f"{k.replace('%', chr(92) + '%')} & {v['median_sd']:.2f} & {v['sd_0.20']:.2f}" + r' \\' for k, v in S['power'].items()]
+(GEN / 'tab_power.tex').write_text('\n'.join(rows) + '\n')
+
+# Label entropy (diversity) of the campaign models
+LE = defaultdict(dict)
+for r in camp: LE[(r['dataset'], r['teacher_kind'], r['model'], r['steps'])][r['seed']] = r['label_entropy']
+rows = []
+for d in DATASETS:
+    cells = [LE[(d, 'hybrid', 'teacher', 32)]] + [LE[(d, 'hybrid', k, 1)] for k in ('hybrid', 'classical', 'surrogate')] + [LE[(d, tk, 'teacher', 32)] for tk in ('classical', 'no_entanglement')]
+    rows.append(f"{DNAME[d]} & " + ' & '.join(f"{np.mean(list(c.values())):.2f}" for c in cells) + r' \\')
+(GEN / 'tab_entropy.tex').write_text('\n'.join(rows) + '\n')
+
+# E0 per-seed relative changes, all branch kinds
+E0R = defaultdict(lambda: defaultdict(list))
+for r in e0:
+    st = 32 if r['role'] == 'teacher' else 1
+    f = {x['variant']: x['fid_like'] for x in r['fid'] if x['steps'] == st}
+    key = (r['dataset'], r['role'], r['kind'])
+    E0R[key]['fm'].append(100 * (f['features_mean'] / f['full'] - 1)); E0R[key]['rz'].append(100 * (f['readout_zeroed'] / f['full'] - 1))
+rows = []
+for d in DATASETS:
+    first = True
+    for role, kinds in (('teacher', ('hybrid', 'no_entanglement')), ('student', ('hybrid', 'surrogate'))):
+        for k in kinds:
+            v = E0R[(d, role, k)]
+            if not v['fm']: continue
+            rows.append(f"{DNAME[d] if first else ''} & {role} & {LABEL[k]} & {np.mean(v['fm']):+.1f} [{min(v['fm']):+.1f}, {max(v['fm']):+.1f}] & {np.mean(v['rz']):+.0f} [{min(v['rz']):+.0f}, {max(v['rz']):+.0f}]" + r' \\')
+            first = False
+(GEN / 'tab_e0_relative.tex').write_text('\n'.join(rows) + '\n')
+S['e0_features_mean_range_pct'] = [min(min(v['fm']) for v in E0R.values()), max(max(v['fm']) for v in E0R.values())]
 
 # ---------------------------------------------------------------- E3 shots / noise
 e3 = load('extension-circuit/e3-noise-shots.h128.json')['rows'] + load('extension-circuit/e3-noise-shots.h0.json')['rows']
@@ -325,4 +449,5 @@ S['classifier_accuracy'] = {d: v['test_accuracy'] for d, v in cv.items()}
 
 (GEN / 'stats.json').write_text(json.dumps(S, indent=1) + '\n')
 print(json.dumps({k: S[k] for k in ('criteria_primary', 'forest_any_equivalent', 'e0_varying_range', 'classifier_accuracy', 'e4b_floor')}, indent=1))
-for k, e in eq.items(): print(f"{k:60s} {e['mean_pct']:+6.1f}% [{e['lo_pct']:+6.1f}, {e['hi_pct']:+6.1f}] p={e['tost_p']:.3f} eq={e['equivalent']}")
+for k, e in eq.items():
+    if isinstance(e, dict): print(f"{k:60s} {e['mean_pct']:+6.1f}% [{e['lo_pct']:+6.1f}, {e['hi_pct']:+6.1f}] eq={e['equivalent']}")
