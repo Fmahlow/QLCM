@@ -1,0 +1,746 @@
+{
+ "equivalence_campaign": {
+  "teacher32_hybrid_vs_classical": {
+   "n": 12,
+   "mean_pct": -0.23589505341343742,
+   "lo_pct": -1.4777917392686302,
+   "hi_pct": 1.0216560458533586,
+   "equivalent": true,
+   "tost_p": 1.9671737995255095e-08,
+   "log_ratios": [
+    -0.02282481450072209,
+    -0.04316889747191743,
+    -0.009256301041207369,
+    0.019778832837054984,
+    0.012322348503446873,
+    -0.014453236524930328,
+    0.023917524614973977,
+    -0.008855484006705713,
+    -0.006132197151067527,
+    0.0029806944931846458,
+    -0.02610513069193052,
+    0.04345581404448744
+   ]
+  },
+  "teacher32_hybrid_vs_noent": {
+   "n": 12,
+   "mean_pct": -0.02366619664639913,
+   "lo_pct": -0.48738092921982723,
+   "hi_pct": 0.442209381005898,
+   "equivalent": true,
+   "tost_p": 3.676048342153002e-13,
+   "log_ratios": [
+    -0.014400389319751841,
+    -0.008951274940710985,
+    -0.004913689386889703,
+    0.0031119832030869913,
+    0.010109125006793573,
+    -0.0024008436659368982,
+    -0.003458919594215207,
+    -0.00029631141709115827,
+    -0.002726067382061287,
+    0.0024641265764723318,
+    0.020647553334510696,
+    -0.002025572118122849
+   ]
+  },
+  "student1_hybrid_vs_classical": {
+   "n": 12,
+   "mean_pct": -1.477734607158221,
+   "lo_pct": -2.863353887246256,
+   "hi_pct": -0.07234996696990903,
+   "equivalent": true,
+   "tost_p": 3.040572858992434e-07,
+   "log_ratios": [
+    0.010348138744704896,
+    -0.01608121313695757,
+    0.007051571104982896,
+    -0.025869185063560833,
+    -0.0010998291140806647,
+    -0.012469638032404562,
+    -0.014797652635856584,
+    0.007719312705980523,
+    0.0019210812674795618,
+    -0.048851930673521414,
+    -0.003153270404952777,
+    -0.08336880984461804
+   ]
+  },
+  "student1_hybrid_vs_surrogate": {
+   "n": 12,
+   "mean_pct": -0.2243726414588143,
+   "lo_pct": -0.48573371625436623,
+   "hi_pct": 0.03767486367449724,
+   "equivalent": true,
+   "tost_p": 8.811241084655588e-16,
+   "log_ratios": [
+    -0.002525032552651545,
+    -0.0018056551217445636,
+    0.0014240856789456404,
+    -0.0036486320652638726,
+    0.006668458273164474,
+    -0.012425206430052281,
+    -0.0017996701919316472,
+    0.0017950433195786035,
+    0.0009449018581128834,
+    -0.009180235465975344,
+    -0.004956265735855467,
+    -0.0014467596493369283
+   ]
+  },
+  "student1_classical_from_hybrid_vs_from_classical_teacher": {
+   "n": 12,
+   "mean_pct": -0.12203969075060828,
+   "lo_pct": -2.111896009456782,
+   "hi_pct": 1.9082661617362717,
+   "equivalent": true,
+   "tost_p": 2.0557348705680005e-06,
+   "log_ratios": [
+    -0.02505289753203035,
+    0.0005239080532067463,
+    -0.04326742229072349,
+    0.04241863714389145,
+    0.038137586721761374,
+    -0.014727737561990709,
+    0.01871979199617485,
+    -0.02654281582651268,
+    -0.011854027853577111,
+    0.005537689556390845,
+    -0.06781044932078556,
+    0.06926403053530619
+   ]
+  },
+  "student1_vs_teacher32": {
+   "n": 12,
+   "mean_pct": -1.7120340191180694,
+   "lo_pct": -8.0060498788606,
+   "hi_pct": 5.012604023828104,
+   "equivalent": true,
+   "tost_p": 0.028894836666692496,
+   "log_ratios": [
+    0.09182775049290175,
+    0.10443664189728029,
+    0.17354960935068414,
+    0.0038082030671619665,
+    0.009055888446486495,
+    -0.03199596342084778,
+    0.007810299364999468,
+    0.022961315681887317,
+    0.03634995555293709,
+    -0.20130870887064145,
+    -0.20715593578919242,
+    -0.21656210797299538
+   ]
+  },
+  "teacher32_hybrid_vs_classical/mnist": {
+   "n": 3,
+   "mean_pct": -2.4771364641763105,
+   "lo_pct": -5.243405185730188,
+   "hi_pct": 0.3698890918210962,
+   "equivalent": true,
+   "tost_p": 0.009564082908523817,
+   "log_ratios": [
+    -0.02282481450072209,
+    -0.04316889747191743,
+    -0.009256301041207369
+   ]
+  },
+  "student1_hybrid_vs_classical/mnist": {
+   "n": 3,
+   "mean_pct": 0.04395954980371819,
+   "lo_pct": -2.355822663145979,
+   "hi_pct": 2.5027207497924975,
+   "equivalent": true,
+   "tost_p": 0.0037971726895157116,
+   "log_ratios": [
+    0.010348138744704896,
+    -0.01608121313695757,
+    0.007051571104982896
+   ]
+  },
+  "teacher32_hybrid_vs_classical/fashion_mnist": {
+   "n": 3,
+   "mean_pct": 0.5899985025872523,
+   "lo_pct": -2.4168729419288604,
+   "hi_pct": 3.6895219880496377,
+   "equivalent": true,
+   "tost_p": 0.006619740498883285,
+   "log_ratios": [
+    0.019778832837054984,
+    0.012322348503446873,
+    -0.014453236524930328
+   ]
+  },
+  "student1_hybrid_vs_classical/fashion_mnist": {
+   "n": 3,
+   "mean_pct": -1.3060183307639028,
+   "lo_pct": -3.3475214448157153,
+   "hi_pct": 0.7786056119204021,
+   "equivalent": true,
+   "tost_p": 0.003752458699000492,
+   "log_ratios": [
+    -0.025869185063560833,
+    -0.0010998291140806647,
+    -0.012469638032404562
+   ]
+  },
+  "teacher32_hybrid_vs_classical/kmnist": {
+   "n": 3,
+   "mean_pct": 0.2981049001488323,
+   "lo_pct": -2.730335577932974,
+   "hi_pct": 3.4208342994865637,
+   "equivalent": true,
+   "tost_p": 0.0063430384363231136,
+   "log_ratios": [
+    0.023917524614973977,
+    -0.008855484006705713,
+    -0.006132197151067527
+   ]
+  },
+  "student1_hybrid_vs_classical/kmnist": {
+   "n": 3,
+   "mean_pct": -0.17176094384414586,
+   "lo_pct": -2.1201304957637945,
+   "hi_pct": 1.815392312325148,
+   "equivalent": true,
+   "tost_p": 0.0025807668008151143,
+   "log_ratios": [
+    -0.014797652635856584,
+    0.007719312705980523,
+    0.0019210812674795618
+   ]
+  },
+  "teacher32_hybrid_vs_classical/pneumoniamnist": {
+   "n": 3,
+   "mean_pct": 0.6800142632919837,
+   "lo_pct": -5.078417744087127,
+   "hi_pct": 6.787782411046517,
+   "equivalent": true,
+   "tost_p": 0.02409182914204183,
+   "log_ratios": [
+    0.0029806944931846458,
+    -0.02610513069193052,
+    0.04345581404448744
+   ]
+  },
+  "student1_hybrid_vs_classical/pneumoniamnist": {
+   "n": 3,
+   "mean_pct": -4.412169523804277,
+   "lo_pct": -10.68128613229684,
+   "hi_pct": 2.2969648743430993,
+   "equivalent": false,
+   "tost_p": 0.08166851219417325,
+   "log_ratios": [
+    -0.048851930673521414,
+    -0.003153270404952777,
+    -0.08336880984461804
+   ]
+  }
+ },
+ "e0_varying_range": [
+  0.04812819756775009,
+  0.11169314113038846
+ ],
+ "criteria_primary": {
+  "e1": {
+   "circuit": 1,
+   "entanglement": 0,
+   "cells": 12
+  },
+  "e2": {
+   "circuit": 0,
+   "entanglement": 0,
+   "cells": 12
+  }
+ },
+ "forest": [
+  {
+   "cell": "E1 MNIST h=0",
+   "comparison": "circuit",
+   "n": 3,
+   "mean_pct": 3.972713522078042,
+   "lo_pct": -2.296936010320061,
+   "hi_pct": 10.644689283091168,
+   "equivalent": false,
+   "tost_p": 0.059045839029083114
+  },
+  {
+   "cell": "E1 MNIST h=0",
+   "comparison": "entanglement",
+   "n": 3,
+   "mean_pct": 10.016239767276325,
+   "lo_pct": -5.945042178178128,
+   "hi_pct": 28.68617766497641,
+   "equivalent": false,
+   "tost_p": 0.500972267902806
+  },
+  {
+   "cell": "E1 MNIST h=4",
+   "comparison": "circuit",
+   "n": 3,
+   "mean_pct": -0.5659062386317082,
+   "lo_pct": -29.333181214613713,
+   "hi_pct": 39.91204319203368,
+   "equivalent": false,
+   "tost_p": 0.2617750377503588
+  },
+  {
+   "cell": "E1 MNIST h=4",
+   "comparison": "entanglement",
+   "n": 3,
+   "mean_pct": -11.527604109799228,
+   "lo_pct": -28.54027631665127,
+   "hi_pct": 9.535335866073558,
+   "equivalent": false,
+   "tost_p": 0.6270321276386164
+  },
+  {
+   "cell": "E1 MNIST h=8",
+   "comparison": "circuit",
+   "n": 3,
+   "mean_pct": 2.0562943420621593,
+   "lo_pct": -8.492261099995735,
+   "hi_pct": 13.820834609575773,
+   "equivalent": false,
+   "tost_p": 0.09133649540935804
+  },
+  {
+   "cell": "E1 MNIST h=8",
+   "comparison": "entanglement",
+   "n": 3,
+   "mean_pct": 6.465809731082306,
+   "lo_pct": 5.084900553319027,
+   "hi_pct": 7.864865285224942,
+   "equivalent": true,
+   "tost_p": 0.009116701990610569
+  },
+  {
+   "cell": "E1 MNIST h=16",
+   "comparison": "circuit",
+   "n": 3,
+   "mean_pct": -11.08656505960739,
+   "lo_pct": -21.59032823245466,
+   "hi_pct": 0.8242827024771193,
+   "equivalent": false,
+   "tost_p": 0.6712531716849606
+  },
+  {
+   "cell": "E1 MNIST h=16",
+   "comparison": "entanglement",
+   "n": 3,
+   "mean_pct": -1.560197084799586,
+   "lo_pct": -6.312142535338106,
+   "hi_pct": 3.432771975158233,
+   "equivalent": true,
+   "tost_p": 0.021231248175970874
+  },
+  {
+   "cell": "E1 MNIST h=32",
+   "comparison": "circuit",
+   "n": 3,
+   "mean_pct": -3.6262904672188845,
+   "lo_pct": -16.424096099891848,
+   "hi_pct": 11.131216722585124,
+   "equivalent": false,
+   "tost_p": 0.17707948721569725
+  },
+  {
+   "cell": "E1 MNIST h=32",
+   "comparison": "entanglement",
+   "n": 3,
+   "mean_pct": -0.600376586753848,
+   "lo_pct": -2.70963996800494,
+   "hi_pct": 1.5546158061899185,
+   "equivalent": true,
+   "tost_p": 0.003349871090576708
+  },
+  {
+   "cell": "E1 MNIST h=128",
+   "comparison": "circuit",
+   "n": 3,
+   "mean_pct": -7.9117575354019305,
+   "lo_pct": -15.557060217657137,
+   "hi_pct": 0.4257362673182774,
+   "equivalent": false,
+   "tost_p": 0.35325531724593245
+  },
+  {
+   "cell": "E1 MNIST h=128",
+   "comparison": "entanglement",
+   "n": 3,
+   "mean_pct": -2.9092148135076767,
+   "lo_pct": -37.67149771187167,
+   "hi_pct": 51.24092866138192,
+   "equivalent": false,
+   "tost_p": 0.3534948316107117
+  },
+  {
+   "cell": "E1 Fashion-MNIST h=0",
+   "comparison": "circuit",
+   "n": 3,
+   "mean_pct": 54.87369401870919,
+   "lo_pct": 15.760810929599046,
+   "hi_pct": 107.2019097515477,
+   "equivalent": false,
+   "tost_p": 0.9622907682779708
+  },
+  {
+   "cell": "E1 Fashion-MNIST h=0",
+   "comparison": "entanglement",
+   "n": 3,
+   "mean_pct": -3.1915338350300027,
+   "lo_pct": -8.17065599808876,
+   "hi_pct": 2.05756365872638,
+   "equivalent": true,
+   "tost_p": 0.0368456106089094
+  },
+  {
+   "cell": "E1 Fashion-MNIST h=4",
+   "comparison": "circuit",
+   "n": 3,
+   "mean_pct": 31.236831418512256,
+   "lo_pct": -4.941347487495951,
+   "hi_pct": 81.18398973208116,
+   "equivalent": false,
+   "tost_p": 0.8744526664950779
+  },
+  {
+   "cell": "E1 Fashion-MNIST h=4",
+   "comparison": "entanglement",
+   "n": 3,
+   "mean_pct": 0.4611902164392001,
+   "lo_pct": -19.826400039347604,
+   "hi_pct": 25.882469349720495,
+   "equivalent": false,
+   "tost_p": 0.18060337515015126
+  },
+  {
+   "cell": "E1 Fashion-MNIST h=8",
+   "comparison": "circuit",
+   "n": 3,
+   "mean_pct": 2.9249310721612964,
+   "lo_pct": -29.417439156178926,
+   "hi_pct": 50.08723556587324,
+   "equivalent": false,
+   "tost_p": 0.3290236934543861
+  },
+  {
+   "cell": "E1 Fashion-MNIST h=8",
+   "comparison": "entanglement",
+   "n": 3,
+   "mean_pct": -3.6937842565790135,
+   "lo_pct": -31.52656725167936,
+   "hi_pct": 35.4523472615855,
+   "equivalent": false,
+   "tost_p": 0.3351958533312609
+  },
+  {
+   "cell": "E1 Fashion-MNIST h=16",
+   "comparison": "circuit",
+   "n": 3,
+   "mean_pct": 4.619241481608216,
+   "lo_pct": -10.662248786228457,
+   "hi_pct": 22.514676488743255,
+   "equivalent": false,
+   "tost_p": 0.22580382047955658
+  },
+  {
+   "cell": "E1 Fashion-MNIST h=16",
+   "comparison": "entanglement",
+   "n": 3,
+   "mean_pct": 1.7237045106212712,
+   "lo_pct": -2.562691447494869,
+   "hi_pct": 6.1986646910327625,
+   "equivalent": true,
+   "tost_p": 0.016870181187755406
+  },
+  {
+   "cell": "E1 Fashion-MNIST h=32",
+   "comparison": "circuit",
+   "n": 3,
+   "mean_pct": -8.605449306846701,
+   "lo_pct": -18.300072209296804,
+   "hi_pct": 2.239550539160562,
+   "equivalent": false,
+   "tost_p": 0.4512006685641641
+  },
+  {
+   "cell": "E1 Fashion-MNIST h=32",
+   "comparison": "entanglement",
+   "n": 3,
+   "mean_pct": 1.4394961720269883,
+   "lo_pct": -4.499733024691743,
+   "hi_pct": 7.748090236178795,
+   "equivalent": true,
+   "tost_p": 0.02965705492383156
+  },
+  {
+   "cell": "E1 Fashion-MNIST h=128",
+   "comparison": "circuit",
+   "n": 3,
+   "mean_pct": 3.661671167011038,
+   "lo_pct": -1.3709698222738265,
+   "hi_pct": 8.95110749618102,
+   "equivalent": true,
+   "tost_p": 0.0367478251771416
+  },
+  {
+   "cell": "E1 Fashion-MNIST h=128",
+   "comparison": "entanglement",
+   "n": 3,
+   "mean_pct": 4.476234245489175,
+   "lo_pct": -4.387955940520993,
+   "hi_pct": 14.16222327940262,
+   "equivalent": false,
+   "tost_p": 0.11591299030012644
+  },
+  {
+   "cell": "E2 q=4 d=2",
+   "comparison": "circuit",
+   "n": 3,
+   "mean_pct": 3.972713522078042,
+   "lo_pct": -2.296936010320061,
+   "hi_pct": 10.644689283091168,
+   "equivalent": false,
+   "tost_p": 0.059045839029083114
+  },
+  {
+   "cell": "E2 q=4 d=2",
+   "comparison": "entanglement",
+   "n": 3,
+   "mean_pct": 10.016239767276325,
+   "lo_pct": -5.945042178178128,
+   "hi_pct": 28.68617766497641,
+   "equivalent": false,
+   "tost_p": 0.500972267902806
+  },
+  {
+   "cell": "E2 q=4 d=2 RU",
+   "comparison": "circuit",
+   "n": 3,
+   "mean_pct": 39.076739253795736,
+   "lo_pct": -12.930862795367181,
+   "hi_pct": 122.149202604469,
+   "equivalent": false,
+   "tost_p": 0.8594236900688319
+  },
+  {
+   "cell": "E2 q=4 d=2 RU",
+   "comparison": "entanglement",
+   "n": 3,
+   "mean_pct": 12.371781710326534,
+   "lo_pct": -33.62609943604979,
+   "hi_pct": 90.24672676253161,
+   "equivalent": false,
+   "tost_p": 0.5416828173361634
+  },
+  {
+   "cell": "E2 q=4 d=4",
+   "comparison": "circuit",
+   "n": 3,
+   "mean_pct": -2.4282655909555806,
+   "lo_pct": -8.258717800161596,
+   "hi_pct": 3.7727305233354658,
+   "equivalent": true,
+   "tost_p": 0.03932581190977022
+  },
+  {
+   "cell": "E2 q=4 d=4",
+   "comparison": "entanglement",
+   "n": 3,
+   "mean_pct": 1.5364191811351402,
+   "lo_pct": -5.256691926533053,
+   "hi_pct": 8.816597496603817,
+   "equivalent": true,
+   "tost_p": 0.03882641811026185
+  },
+  {
+   "cell": "E2 q=4 d=4 RU",
+   "comparison": "circuit",
+   "n": 3,
+   "mean_pct": 95.8641560332449,
+   "lo_pct": 50.658302097683475,
+   "hi_pct": 154.63427560561342,
+   "equivalent": false,
+   "tost_p": 0.9882933591824072
+  },
+  {
+   "cell": "E2 q=4 d=4 RU",
+   "comparison": "entanglement",
+   "n": 3,
+   "mean_pct": 31.883107704378034,
+   "lo_pct": -3.7154634398988473,
+   "hi_pct": 80.64327584842977,
+   "equivalent": false,
+   "tost_p": 0.882887961565914
+  },
+  {
+   "cell": "E2 q=6 d=2",
+   "comparison": "circuit",
+   "n": 3,
+   "mean_pct": 16.972627086810867,
+   "lo_pct": -2.3346186154676762,
+   "hi_pct": 40.09667800014438,
+   "equivalent": false,
+   "tost_p": 0.7876786033910806
+  },
+  {
+   "cell": "E2 q=6 d=2",
+   "comparison": "entanglement",
+   "n": 3,
+   "mean_pct": -0.31529994100635284,
+   "lo_pct": -9.264920606273874,
+   "hi_pct": 9.517063215780052,
+   "equivalent": false,
+   "tost_p": 0.05178545052782401
+  },
+  {
+   "cell": "E2 q=6 d=2 RU",
+   "comparison": "circuit",
+   "n": 3,
+   "mean_pct": 107.0113739504337,
+   "lo_pct": 69.21491512891905,
+   "hi_pct": 153.25018726746126,
+   "equivalent": false,
+   "tost_p": 0.9941428483449336
+  },
+  {
+   "cell": "E2 q=6 d=2 RU",
+   "comparison": "entanglement",
+   "n": 3,
+   "mean_pct": 26.160997658906425,
+   "lo_pct": -36.65267233002479,
+   "hi_pct": 151.25917565477033,
+   "equivalent": false,
+   "tost_p": 0.6900052926036702
+  },
+  {
+   "cell": "E2 q=6 d=4",
+   "comparison": "circuit",
+   "n": 3,
+   "mean_pct": 6.205966046730094,
+   "lo_pct": -35.080974375883734,
+   "hi_pct": 73.75040853553688,
+   "equivalent": false,
+   "tost_p": 0.42716995689723425
+  },
+  {
+   "cell": "E2 q=6 d=4",
+   "comparison": "entanglement",
+   "n": 3,
+   "mean_pct": 5.624537367747839,
+   "lo_pct": -20.389680322834693,
+   "hi_pct": 40.139405788001106,
+   "equivalent": false,
+   "tost_p": 0.35790864421460405
+  },
+  {
+   "cell": "E2 q=6 d=4 RU",
+   "comparison": "circuit",
+   "n": 3,
+   "mean_pct": 157.3781791324973,
+   "lo_pct": 87.19551878245213,
+   "hi_pct": 253.87346622620976,
+   "equivalent": false,
+   "tost_p": 0.9919708477977274
+  },
+  {
+   "cell": "E2 q=6 d=4 RU",
+   "comparison": "entanglement",
+   "n": 3,
+   "mean_pct": 9.21761407398436,
+   "lo_pct": -32.74630950964143,
+   "hi_pct": 77.36554138577488,
+   "equivalent": false,
+   "tost_p": 0.484808982015888
+  },
+  {
+   "cell": "E2 q=8 d=2",
+   "comparison": "circuit",
+   "n": 3,
+   "mean_pct": -5.591014229536084,
+   "lo_pct": -13.07178603633663,
+   "hi_pct": 2.5335295389064427,
+   "equivalent": false,
+   "tost_p": 0.15661633355591206
+  },
+  {
+   "cell": "E2 q=8 d=2",
+   "comparison": "entanglement",
+   "n": 3,
+   "mean_pct": -3.6941322140956134,
+   "lo_pct": -13.88020449352856,
+   "hi_pct": 7.696727743613185,
+   "equivalent": false,
+   "tost_p": 0.13547569485531452
+  },
+  {
+   "cell": "E2 q=8 d=2 RU",
+   "comparison": "circuit",
+   "n": 3,
+   "mean_pct": 120.78579248219165,
+   "lo_pct": 8.62197469755197,
+   "hi_pct": 348.7707602234192,
+   "equivalent": false,
+   "tost_p": 0.9484470039903053
+  },
+  {
+   "cell": "E2 q=8 d=2 RU",
+   "comparison": "entanglement",
+   "n": 3,
+   "mean_pct": 46.35220818566999,
+   "lo_pct": -9.266076640584709,
+   "hi_pct": 136.06351459064382,
+   "equivalent": false,
+   "tost_p": 0.8883568653917329
+  },
+  {
+   "cell": "E2 q=8 d=4",
+   "comparison": "circuit",
+   "n": 3,
+   "mean_pct": 3.009649205564857,
+   "lo_pct": -12.351949675871065,
+   "hi_pct": 21.0635922899975,
+   "equivalent": false,
+   "tost_p": 0.17852657902409239
+  },
+  {
+   "cell": "E2 q=8 d=4",
+   "comparison": "entanglement",
+   "n": 3,
+   "mean_pct": -0.7696249864125648,
+   "lo_pct": -12.44896289505757,
+   "hi_pct": 12.46774054240567,
+   "equivalent": false,
+   "tost_p": 0.08893184900443647
+  },
+  {
+   "cell": "E2 q=8 d=4 RU",
+   "comparison": "circuit",
+   "n": 3,
+   "mean_pct": 173.98823281342914,
+   "lo_pct": 46.119399142352655,
+   "hi_pct": 413.7548618516524,
+   "equivalent": false,
+   "tost_p": 0.974299089447633
+  },
+  {
+   "cell": "E2 q=8 d=4 RU",
+   "comparison": "entanglement",
+   "n": 3,
+   "mean_pct": -14.61626533952467,
+   "lo_pct": -47.00317511261062,
+   "hi_pct": 37.56262115818201,
+   "equivalent": false,
+   "tost_p": 0.6309919523429027
+  }
+ ],
+ "forest_any_equivalent": 9,
+ "e4b_floor": 13.66895932054725,
+ "classifier_accuracy": {
+  "mnist": 0.9589,
+  "fashion_mnist": 0.8889,
+  "kmnist": 0.9314,
+  "pneumoniamnist": 0.8269230769230769
+ }
+}

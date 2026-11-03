@@ -1,15 +1,17 @@
 # QLCM
 
-Active direction (approved 2026-10-06): characterize when consistency distillation
-of a **hybrid quantum latent diffusion teacher** pays off under limited circuit
-calls and measurement budgets. Novelty is a candidate, not established priority.
+Consistency distillation of **hybrid quantum latent diffusion teachers**, with
+controls that test whether the circuit contributes.
 
-Start here: [Cold-start execution handoff](v2/HANDOFF.md). On a GPU server, the
-initial MNIST pilot entry point is `python -m v2.orchestrate`; first use `--dry-run`. No GPU campaign
-or hardware experiment has been executed for v2. Fashion-MNIST is an optional
-extension after evaluating the MNIST pilot.
+Status (2026-11-03): the v2 pilot, the 4-dataset teacher/student campaign and the
+preregistered extension E0--E4 have run (3 seeds each). Distillation works (the
+one-step student matches the 32-step teacher); the circuit does not contribute
+measurably relative to size-matched classical controls or an exact separable
+surrogate. Results: [v2/RESULTS.md](v2/RESULTS.md). Manuscript: [paper/](paper/README.md).
 
-- [Research decision, protocol, audit and literature](v2/PROTOCOL.md)
+- [Manuscript](paper/main.tex) and [asset script](paper/analysis/make_assets.py)
+- [Results log](v2/RESULTS.md), [GPU handoff](v2/HANDOFF.md)
+- [Research decision, protocol, audit, literature and preregistration](v2/PROTOCOL.md)
 - [CPU smoke configuration](v2/smoke.json), [GPU pilot configuration](v2/gpu_pilot.json)
 - [Pilot implementation](v2/core.py), [runner](v2/run.py), [orchestrator](v2/orchestrate.py)
 - Historical study: [manuscript](v1/paper/main.tex), [execution log](v1/experiments/execution_checklist.md), [configs](v1/configs/), [figures](v1/figures/)

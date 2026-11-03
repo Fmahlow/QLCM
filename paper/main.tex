@@ -1,0 +1,831 @@
+\documentclass[11pt]{article}
+
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{booktabs}
+\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage[colorlinks=true,linkcolor=blue!50!black,citecolor=blue!50!black,urlcolor=blue!50!black]{hyperref}
+\usepackage[numbers,sort&compress]{natbib}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta,positioning,fit,calc}
+\usepackage{caption}
+\usepackage{adjustbox}
+\captionsetup{font=small}
+
+\newcommand{\abar}{\bar\alpha}
+\newcommand{\fidlike}{FID-like}
+\makeatletter\newcommand{\tabinput}[1]{\@@input #1 }\makeatother % expandable input inside tabular
+
+\title{Does the Circuit Matter? Controlled Ablations of Hybrid Quantum Latent Consistency Distillation}
+\author{Felipe Mahlow\thanks{Manuscript in preparation. Affiliation and acknowledgements to be completed.}}
+\date{\today}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+Hybrid quantum--classical diffusion models for image generation are usually
+compared against classical networks of similar size, which leaves open whether
+the parameterized circuit itself contributes anything that a classical layer of
+the same shape could not. We study this question in a setting where it is also
+practically relevant: consistency distillation of a hybrid latent diffusion
+teacher into a one-step student, which reduces the number of circuit
+evaluations per sample by up to $32\times$. The models are a latent
+denoiser with a 4--8-qubit variational branch added to a classical MLP, trained
+on MNIST, Fashion-MNIST, KMNIST and PneumoniaMNIST with three seeds. Besides
+fully classical teachers and students, we use three controls that isolate
+different parts of the circuit: an exact, linear-cost classical simulation of
+the same circuit without entangling gates; a classical branch with the same
+inputs, outputs and range; and an ablation that replaces the circuit's
+input-dependent output with its mean. Distillation works: a one-step student
+matches the 32-step teacher on all four datasets and, at an equal finite-shot
+budget, beats the few-step teacher. The circuit does not contribute measurably.
+Across 12 paired runs, hybrid and classical teachers differ by $-0.2\%$ in
+classifier-feature \fidlike{} (90\% CI $[-1.5\%, +1.0\%]$), and hybrid students
+and their separable surrogates by $-0.2\%$ ($[-0.5\%, 0.0\%]$); both are
+equivalent within a $\pm10\%$ margin. In the trained models the branch acts
+mostly as a learned constant: its input-dependent part is 5--11\% of the
+backbone's output, and replacing it with its mean changes \fidlike{} by
+0--3 points. In a preregistered capacity sweep and a circuit-scaling sweep
+(up to 8 qubits, depth 4, with and without data re-uploading), the circuit
+beat the size-matched classical control in 1 of 24 cells and entanglement beat
+the separable surrogate in none; where the circuit carries the whole model, it
+was often worse than the classical control. These are negative results for
+one model family at small scale, under exact simulation and simple noise;
+they are not claims about quantum circuits in general.
+\end{abstract}
+
+\textbf{Keywords:} quantum machine learning; consistency distillation; latent
+diffusion; benchmarking; classical surrogates; negative results
+
+% ---------------------------------------------------------------------------
+\section{Introduction}
+
+Diffusion models generate data by reversing a gradual noising process
+\citep{ho2020ddpm}, at the cost of many sequential network evaluations.
+Latent diffusion moves this process into the latent space of an autoencoder
+\citep{rombach2022ldm}, and consistency models learn a map from any point of a
+sampling trajectory directly to its clean endpoint, so that one or a few
+evaluations suffice \citep{song2023consistency,luo2023lcm}.
+
+The same two ideas appear in quantum generative modelling. Several recent
+models place variational circuits inside the denoiser of a latent diffusion
+model and report better image quality than classical networks with a similar
+number of parameters \citep{defalco2024efficient,defalco2025qldm,yeteraydeniz2025medical,qian2026hybrid}.
+Others reduce the number of circuit calls with consistency-style or unitary
+single-step samplers \citep{kolle2024qddm,zhang2025oqiddm}. For a circuit on
+near-term hardware the number of calls matters more than for a GPU network,
+because every call costs a full set of measurement shots. Distilling a
+hybrid teacher into a one-step student is therefore an appealing way to cut the
+quantum cost of sampling.
+
+Two questions are usually conflated in this literature. The first is whether
+the hybrid model works; the second is whether it works \emph{because of the
+circuit}. Parameter-matched classical baselines answer the first but not the
+second, since they differ from the hybrid model in architecture, not only in
+the circuit. Benchmarking studies of quantum classifiers have found that
+simple classical models often match or beat them and that removing
+entanglement often does not hurt \citep{bowles2024better}, and many
+re-uploading models admit efficient classical surrogates \citep{schreiber2023surrogates}.
+Whether this also holds for hybrid diffusion models has, to our knowledge,
+not been tested with controls that isolate the circuit.
+
+We study it in the distillation setting described above. Our contributions are:
+\begin{enumerate}
+  \item A hybrid latent consistency-distillation pipeline in which both the
+  teacher and the student can contain a variational branch, with explicit
+  accounting of circuit evaluations, timing, and finite-shot cost
+  (Section~\ref{sec:method}).
+  \item A set of controls that isolate the circuit: an exact classical
+  simulation of the same circuit without entangling gates, a size-matched
+  classical branch, fully classical networks, and ablations that remove either
+  the whole branch or only its input-dependent part (Section~\ref{sec:controls}).
+  \item Evidence that distillation transfers across four datasets: the one-step
+  student matches the 32-step teacher and, at equal shot budget, beats the
+  few-step teacher (Sections~\ref{sec:res-distill} and~\ref{sec:res-shots}).
+  \item Evidence, from equivalence tests and from preregistered sweeps over
+  capacity, qubit count, depth and data re-uploading, that the circuit
+  contributes nothing that the classical controls do not reproduce
+  (Sections~\ref{sec:res-equivalence}--\ref{sec:res-sweeps}).
+\end{enumerate}
+
+We make no claim of quantum advantage, and our circuits (4--8 qubits) are
+trivially simulable. The question is narrower and, we think, prior to any
+advantage claim: whether, in this model family, the circuit changes the
+function the model learns.
+
+% ---------------------------------------------------------------------------
+\section{Related Work}
+
+\paragraph{Diffusion, distillation and consistency models.}
+DDIM turns a trained diffusion model into a deterministic sampler that can skip
+steps \citep{song2021ddim}. Progressive distillation halves the number of steps
+repeatedly and introduced the $v$-parameterisation we use for the teacher
+\citep{salimans2022progressive}. Consistency distillation trains a student to
+give the same output at adjacent points of the teacher's sampling trajectory,
+with an exponential-moving-average target and a boundary condition at $t=0$
+\citep{song2023consistency}; latent consistency models apply this in the latent
+space of a pretrained latent diffusion model \citep{luo2023lcm}. We follow this
+recipe in a small latent space and use a cosine noise schedule
+\citep{nichol2021improved}.
+
+\paragraph{Quantum and hybrid diffusion models.}
+QuDDPM and its mixed-state extension define diffusion over quantum states
+\citep{zhang2023quddpm,kwun2024mixedquddpm}. For classical images,
+\citet{kolle2024qddm} propose quantum denoising diffusion models and a unitary
+single-sampling variant inspired by consistency models;
+\citet{zhang2025oqiddm} combine optimized quantum implicit neural networks with
+consistency models for $O(1)$-step sampling (we could only access the abstract
+and a partial preview of this work, so we do not compare against its
+equations). In latent space, \citet{defalco2025qldm} use an autoencoder with a
+10-dimensional latent and variational circuits for image, time and their
+combination, \citet{yeteraydeniz2025medical} use quantum residual blocks for
+medical images, and \citet{qian2026hybrid} run a mixed-state quantum diffusion
+model in an autoencoder's latent space. These works compare against classical
+models of similar size. None, to our knowledge, distils a hybrid teacher into a
+few-step student, and none includes a control that keeps the architecture
+fixed and removes only the circuit or only its entanglement.
+
+\paragraph{Benchmarking and dequantisation.}
+\citet{bowles2024better} benchmark twelve quantum classifiers against simple
+classical models and find that the classical models usually win and that
+removing entanglement often does not hurt. \citet{schreiber2023surrogates}
+show that large classes of re-uploading models have efficiently computable
+classical surrogates. The function computed by a circuit with angle encoding
+is a truncated Fourier series in the inputs whose frequencies are set by the
+encoding \citep{schuld2021encoding}; re-uploading raises the available
+frequencies \citep{perezsalinas2020reuploading}. Our separable surrogate is an
+instance of an exact classical surrogate: without entangling gates, the circuit
+factorises into independent single-qubit rotations of Bloch vectors.
+
+% ---------------------------------------------------------------------------
+\section{Method}
+\label{sec:method}
+
+\begin{figure}[t]
+\centering
+\begin{adjustbox}{max width=\textwidth}\begin{tikzpicture}[
+  node distance=5mm and 7mm,
+  box/.style={draw, rounded corners=2pt, minimum height=8mm, align=center, font=\footnotesize, inner sep=3pt},
+  qbox/.style={box, fill=blue!6},
+  arr/.style={-{Stealth[length=1.8mm]}, semithick},
+]
+\node[box] (in) {$z_t$, $t$};
+\node[box, right=of in] (feat) {features\\$\phi=[z_t,u,\sin\pi u,\cos\pi u]$};
+\node[box, above right=2mm and 9mm of feat] (bb) {backbone MLP\\(hidden $h$; absent if $h=0$)};
+\node[box, below right=2mm and 9mm of feat] (cmp) {compressor\\$\pi\tanh(W\phi+b)\in\mathbb{R}^{2q}$};
+\node[qbox, right=of cmp] (circ) {branch block:\\circuit $|$ surrogate $|$\\classical branch};
+\node[box, right=of circ] (ro) {readout\\$\mathbb{R}^{q}\to\mathbb{R}^{16}$};
+\node[draw, circle, inner sep=1pt, font=\footnotesize] (sum) at ($(ro.east)+(8mm,9mm)$) {$+$};
+\node[box, right=8mm of sum] (out) {$F_\theta(z_t,t)$};
+\draw[arr] (in) -- (feat);
+\draw[arr] (feat.east) -- ++(3mm,0) |- (bb.west);
+\draw[arr] (feat.east) -- ++(3mm,0) |- (cmp.west);
+\draw[arr] (cmp) -- (circ);
+\draw[arr] (circ) -- (ro);
+\draw[arr] (ro.east) -| (sum.south);
+\draw[arr] (bb.east) -| (sum.north);
+\draw[arr] (sum) -- (out);
+\end{tikzpicture}\end{adjustbox}
+\caption{Network used for every teacher and student. The branch block is a
+$q$-qubit circuit (hybrid, or without entangling gates), its exact separable
+surrogate, or a classical layer $\tanh(\mathrm{Linear}(2q\to q))$; the fully
+classical network has no branch. The teacher reads $F_\theta$ as a
+$v$-prediction; the student wraps it in the boundary parameterisation of
+Eq.~\eqref{eq:student}. $u=t/T$.}
+\label{fig:arch}
+\end{figure}
+
+\subsection{Latent space and noise schedule}
+
+A convolutional autoencoder (two stride-2 convolutions, a linear layer to a
+16-dimensional latent, and the mirror decoder) is trained for 20 epochs with a
+pixel MSE loss on 10{,}000 training images (4{,}708 for PneumoniaMNIST, its full
+training split). Latents are standardised with the per-dimension training mean
+and standard deviation. We use $T=32$ discrete noise levels with a cosine
+schedule \citep{nichol2021improved},
+\begin{equation}
+  \abar_t = \max\!\left(\cos^2\!\frac{\pi t}{2T},\,10^{-6}\right),\quad \abar_0=1,\qquad
+  z_t=\sqrt{\abar_t}\,z_0+\sqrt{1-\abar_t}\,\epsilon,\ \ \epsilon\sim\mathcal{N}(0,I),
+\end{equation}
+so that $z_T$ is essentially pure noise and sampling starts from $\mathcal{N}(0,I)$.
+
+\subsection{Network and branch}
+\label{sec:network}
+
+Every teacher and student uses the network of Figure~\ref{fig:arch}. With $u=t/T$, the
+input features are $\phi=[z_t,\,u,\,\sin\pi u,\,\cos\pi u]$. The output
+is the sum of a classical backbone (a three-layer MLP with SiLU activations
+and hidden width $h$; $h=128$ unless stated) and a branch
+\begin{equation}
+  B(\phi)=W_r\,g\!\left(\pi\tanh(W_c\phi+b_c)\right)+b_r,
+\end{equation}
+where the compressor produces $2q$ angles $(\theta,\varphi)$ for $q$ qubits,
+$g:\mathbb{R}^{2q}\to[-1,1]^q$ is the branch block, and $(W_r,b_r)$ is a linear
+readout to the 16-dimensional latent. With $h=128$ and $q=4$, the branch has 256
+of the network's 21{,}392 parameters.
+
+\paragraph{Circuit.} The hybrid branch block prepares the product state
+$\bigotimes_j R_Z(\varphi_j)R_Y(\theta_j)|0\rangle$, applies $L$ trainable layers
+$U_\ell=\mathrm{CZ}_{\mathrm{ring}}\bigotimes_j R_Z(w_{\ell j2})R_Y(w_{\ell j1})$,
+where $\mathrm{CZ}_{\mathrm{ring}}$ applies CZ between neighbouring qubits on a
+ring, then a fixed $\bigotimes_j R_Y(\pi/4)$, and returns the exact expectation
+values $\langle Z_j\rangle$. The final rotation makes phases and entanglement
+visible to a $Z$ readout; without it, the last layer's $R_Z$ and CZ gates would
+not affect the output. The circuit has $2qL$ trainable parameters (16 for
+$q=4$, $L=2$). With data re-uploading, the encoding rotations are repeated
+before every trainable layer. All circuits are simulated exactly as state
+vectors; the data-independent gates of each forward pass are fused into one
+matrix, which is tested against gate-by-gate simulation.
+
+\subsection{Teacher}
+
+The teacher predicts $v=\sqrt{\abar_t}\,\epsilon-\sqrt{1-\abar_t}\,z_0$
+\citep{salimans2022progressive} and is trained with an MSE loss for 150 epochs
+(AdamW \citep{loshchilov2019adamw}, learning rate $10^{-3}$, batch 64). It
+samples with deterministic DDIM \citep{song2021ddim} on $k$ uniformly spaced
+levels between $T$ and $1$, followed by a final step to $t=0$.
+
+\subsection{Consistency distillation}
+
+The student wraps the network in a parameterisation that enforces the
+boundary condition $f_\theta(z,0)=z$:
+\begin{equation}
+  f_\theta(z_t,t)=\abar_t\,z_t+\sqrt{1-\abar_t}\,F_\theta(z_t,t).
+  \label{eq:student}
+\end{equation}
+For a clean latent $z_0$, a level $t\sim\mathcal{U}\{1,\dots,T\}$ and noise
+$\epsilon$, let $\hat z_{t-1}=\Phi(z_t;t\to t-1)$ be one DDIM step of the frozen
+teacher. The loss is
+\begin{equation}
+  \mathcal{L}(\theta)=\mathbb{E}\left\|f_\theta(z_t,t)-f_{\theta^-}(\hat z_{t-1},t-1)\right\|_2^2,
+\end{equation}
+where $\theta^-$ is an exponential moving average of $\theta$ with decay
+$\mu$, updated after every optimiser step \citep{song2023consistency}. Unless
+stated otherwise, students train for 200 epochs with $\mu=0.95$
+(Section~\ref{sec:res-budget} explains this choice). Students of different
+kinds trained from the same teacher share the initialisation seed and the exact
+sequence of minibatches and noise draws. One-step sampling returns
+$f_\theta(z_T,T)$. With $k$ steps, the student's prediction at each level is
+re-noised to the next level with fresh noise before the next evaluation.
+
+\subsection{Controls}
+\label{sec:controls}
+
+Each control changes one thing about the network of Section~\ref{sec:network}
+and leaves everything else (data, autoencoder, teacher, seeds, minibatch order)
+fixed.
+\begin{description}
+  \item[No entanglement.] The same circuit without CZ gates.
+  \item[Separable surrogate.] An exact classical implementation of the
+  no-entanglement circuit: each qubit is a Bloch vector rotated by the same
+  $R_Y$ and $R_Z$ angles, and the output is $(b_z-b_x)/\sqrt2$, which equals
+  $\langle Z\rangle$ after the final $R_Y(\pi/4)$. It has the same parameters and
+  gradients as the no-entanglement circuit, at cost linear in $q$. Unit tests
+  confirm that it matches the no-entanglement circuit and differs from the
+  entangled one on random inputs.
+  \item[Classical branch.] The branch block is replaced by
+  $\tanh(\mathrm{Linear}(2q\to q))$: same input, same output dimension and range,
+  with cross-feature interactions (36 parameters for $q=4$, against the
+  circuit's 16, which favours the control).
+  \item[Classical.] No branch at all; only the backbone.
+  \item[Branch ablations at evaluation.] In a trained model, either zero the
+  readout (removing the branch, including its learned bias), or replace the
+  circuit output $g$ by its mean over noisy training latents
+  (\texttt{features\_mean}), which removes only the input-dependent part of
+  the branch.
+\end{description}
+
+\subsection{Cost accounting}
+
+Each sampling step evaluates the network once per sample, so a $k$-step
+sampler with a circuit makes $k$ circuit evaluations per sample. We report
+end-to-end wall-clock time for 512 samples, including the decoder, as the median
+of five synchronised repetitions after two warm-up runs on one RTX~3080~Ti.
+Simulated circuit time is not a proxy for hardware latency; for hardware cost
+we report total measurement shots per sample (steps $\times$ shots per
+evaluation) in Section~\ref{sec:res-shots}.
+
+% ---------------------------------------------------------------------------
+\section{Experimental Protocol}
+\label{sec:protocol}
+
+\paragraph{Datasets.} MNIST \citep{lecun1998mnist}, Fashion-MNIST
+\citep{xiao2017fashion}, KMNIST \citep{clanuwat2018kmnist} and PneumoniaMNIST
+from MedMNIST v2 \citep{yang2023medmnist} (two unbalanced classes,
+1{,}214/3{,}494 training images; CC BY 4.0), all $28\times28$ greyscale.
+
+\paragraph{Metric.} Following \citet{heusel2017fid}, we compute the Fréchet
+distance between Gaussian fits to features of 512 generated samples and 1{,}000
+real test images, but the features are the 64-dimensional penultimate layer of
+a small CNN classifier trained separately for each dataset, not Inception. We
+call this score \fidlike{}; lower is better. It is only comparable within a
+dataset in this paper, never across datasets or to published FID values. The
+classifiers were trained with budgets fixed before inspecting the test split
+and reach held-out accuracies of 0.959 (MNIST), 0.889 (Fashion-MNIST), 0.931
+(KMNIST) and 0.827 (PneumoniaMNIST). We also record the entropy of the
+classifier's predicted labels as a diversity check.
+
+\paragraph{Teacher gate.} Before training students, each 32-step teacher had
+to reach a label entropy of at least $0.8\ln 10$ (for PneumoniaMNIST, $0.8$
+times the entropy of the training labels) and a mean classifier confidence of at
+least 0.8 times that on real images. All 36 teachers of the dataset campaign
+passed.
+
+\paragraph{Seeds and runs.} Every configuration uses seeds 0, 1, 2; the seed
+fixes the autoencoder, teacher and student, so each seed is an independent
+replicate of the whole pipeline. Paired comparisons match seeds.
+
+\paragraph{Experiments.} The work proceeded in four stages, each fixed before
+it was run:
+\begin{enumerate}
+  \item \emph{Pilot} (MNIST, hybrid teacher; students with 50 epochs, $\mu=0.999$),
+  followed by a student-budget diagnostic that reused the pilot's autoencoders and
+  teachers and varied only epochs and $\mu$ (Section~\ref{sec:res-budget}).
+  \item \emph{Dataset and teacher campaign}: 4 datasets $\times$ 3 seeds; on each
+  autoencoder, a hybrid, a classical and a no-entanglement teacher. The hybrid
+  teacher is distilled into hybrid, classical and surrogate students; the
+  control teachers into a classical student
+  (Sections~\ref{sec:res-distill}--\ref{sec:res-equivalence}).
+  \item \emph{Preregistered extension} \textbf{E0--E4}, with criteria written
+  into the repository before any run (Sections~\ref{sec:res-e0}--\ref{sec:res-e4}):
+  E0, branch ablations of the campaign models; E1, a capacity sweep over $h$;
+  E2, circuit scaling with no backbone; E3, finite shots and noise at
+  inference; E4, diagnostics of multi-step degradation and of KMNIST.
+\end{enumerate}
+
+\paragraph{Preregistered criteria (E1, E2).} In each cell (dataset, $h$, or
+circuit configuration), with teacher and student of the same kind and size and
+the one-step student's \fidlike{} as the primary metric: the \emph{circuit
+contributes} if the hybrid model beats the classical branch in all three seeds
+and its mean is at least 10\% lower; \emph{entanglement contributes} if the
+hybrid beats the separable surrogate under the same rule. The 32-step teacher
+and the 4-step student are secondary metrics.
+
+\paragraph{Equivalence analysis (post hoc).} The criteria above can detect a
+contribution but cannot establish its absence. We therefore add, after the
+fact, two one-sided tests (TOST) on paired log-ratios of \fidlike{}
+\citep{lakens2017tost}. We report the mean ratio and its 90\% $t$-interval
+and call two models \emph{equivalent} if the interval lies inside
+$[1/1.1,\,1.1]$, the same 10\% used by the preregistered criteria. Pooled tests
+treat the 12 dataset--seed pairs as independent replicates. With three seeds
+per cell, single-cell intervals are wide; we show them in Figure~\ref{fig:forest}
+but base equivalence claims only on pooled tests.
+
+% ---------------------------------------------------------------------------
+\section{Results}
+\label{sec:results}
+
+\subsection{Student budget: the pilot was undertrained}
+\label{sec:res-budget}
+
+In the pilot, no student met the advance criterion we had proposed (in every
+seed, \fidlike{} at most 10\% worse than the 32-step teacher, label entropy loss
+at most $0.1\ln10$, and at least $2\times$ faster): the best one-step students
+scored 347.5 (hybrid) and 426.9 (classical), against 24.7 for the 32-step
+teacher (Table~\ref{tab:budget}). A diagnostic that changed only the student's
+epochs and EMA decay showed that the students, not distillation, were the
+problem. With $\mu=0.999$ and 50 epochs the target network lags too far behind
+to propagate the boundary condition up to $t=T$. Lowering $\mu$ to 0.95, or
+training four times longer, brings the one-step \fidlike{} to 28--32. With
+200 epochs and $\mu=0.95$, four-step hybrid, classical and surrogate students
+meet the advance criterion in all three seeds. We use this budget for all later
+students. Already here, hybrid and classical students are indistinguishable.
+
+\begin{table}[t]
+\centering\small
+\caption{MNIST student budget (pilot autoencoders and teachers; students from the
+hybrid teacher). \fidlike{}, mean $\pm$ population SD over three seeds. The
+32-step teacher scores $24.7\pm1.5$.}
+\label{tab:budget}
+\begin{adjustbox}{max width=\textwidth}\begin{tabular}{llccc}
+\toprule
+Epochs / EMA $\mu$ & Student & 1 step & 4 steps & 32 steps \\
+\midrule
+\tabinput{generated/tab_budget.tex}
+\bottomrule
+\end{tabular}\end{adjustbox}
+\end{table}
+
+\subsection{Distillation transfers across datasets}
+\label{sec:res-distill}
+
+Figure~\ref{fig:steps} and Table~\ref{tab:campaign} show the dataset campaign.
+On all four datasets, the one-step student is at the level of the 32-step
+teacher and far ahead of the teacher with one to four DDIM steps. Pooled over
+datasets and seeds, the one-step hybrid student's \fidlike{} is $1.7\%$
+lower than the 32-step teacher's (90\% CI $[-8.0\%, +5.0\%]$). On MNIST
+this means 28.0 in about 11~ms for 512 samples, against 24.7 in 328~ms for the
+32-step teacher and 31.1 for its 8-step version. The advance criterion is met in all
+seeds and datasets by the students of the hybrid teacher (at 4 steps on MNIST,
+1--8 steps on Fashion-MNIST and KMNIST, and 1--2 steps on PneumoniaMNIST).
+
+Students do not improve monotonically with steps. On MNIST and especially
+PneumoniaMNIST, quality degrades beyond 4--8 steps (\fidlike{} $\approx100$ at 32
+steps on PneumoniaMNIST, with large seed variance); on KMNIST it improves.
+Section~\ref{sec:res-e4} traces this to a fraction of diverging samples.
+KMNIST has high absolute \fidlike{} for every model; Section~\ref{sec:res-e4}
+attributes this to the autoencoder.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\textwidth]{figures/fig_steps.pdf}
+\caption{\fidlike{} against sampling steps for the hybrid teacher and its
+students (log axes; mean $\pm$ SD over three seeds). \fidlike{} is not
+comparable across panels. Hybrid, surrogate and classical students overlap
+almost everywhere.}
+\label{fig:steps}
+\end{figure}
+
+\begin{table}[t]
+\centering\footnotesize
+\setlength{\tabcolsep}{4pt}
+\caption{Dataset and teacher campaign. For each teacher kind, \fidlike{} of the
+teacher at 1/4/32 DDIM steps and of the classical student distilled from it.
+Mean $\pm$ population SD over three seeds.}
+\label{tab:campaign}
+\begin{adjustbox}{max width=\textwidth}\begin{tabular}{llcccccc}
+\toprule
+& & \multicolumn{3}{c}{Teacher} & \multicolumn{3}{c}{Classical student} \\
+\cmidrule(lr){3-5}\cmidrule(lr){6-8}
+Dataset & Teacher & 1 & 4 & 32 & 1 & 4 & 32 \\
+\midrule
+\tabinput{generated/tab_campaign.tex}
+\bottomrule
+\end{tabular}\end{adjustbox}
+\end{table}
+
+\subsection{Hybrid and classical models are equivalent}
+\label{sec:res-equivalence}
+
+Teachers with a circuit, with a circuit without entanglement, and without any
+branch have indistinguishable DDIM curves on all datasets
+(Table~\ref{tab:campaign}). The same holds for the students of the hybrid
+teacher (Table~\ref{tab:students}). Table~\ref{tab:equivalence} turns this into
+equivalence tests. Every comparison is equivalent within $\pm10\%$, and all
+intervals lie within $\pm3\%$. The only interval that excludes zero favours
+the hybrid student over the classical student by 1.5\%. That classical student
+has no branch at all, so this comparison also changes the parameter count;
+against its exact separable surrogate, the hybrid student differs by $0.2\%$.
+The circuit costs time: per sampling step, simulated circuit models are about
+8 times slower than classical ones, and the separable surrogate runs the same
+function about 5 times faster than the simulated circuit
+(Table~\ref{tab:students}).
+
+\begin{table}[t]
+\centering\small
+\caption{One-step students of the hybrid teacher. \fidlike{} mean $\pm$ SD over
+three seeds; time is the median end-to-end time for 512 one-step samples.}
+\label{tab:students}
+\begin{adjustbox}{max width=\textwidth}\begin{tabular}{lccccc}
+\toprule
+Dataset & Teacher (32 steps) & Hybrid & Classical & Surrogate & Time (ms): hyb.\ / cla.\ / sur. \\
+\midrule
+\tabinput{generated/tab_students.tex}
+\bottomrule
+\end{tabular}\end{adjustbox}
+\end{table}
+
+\begin{table}[t]
+\centering\small
+\caption{Equivalence tests on paired \fidlike{} ratios, pooled over four datasets
+and three seeds ($n=12$). Negative values favour the first model. Equivalent:
+90\% CI inside $[-9.1\%,+10\%]$ (ratio in $[1/1.1,1.1]$); $p$ is the TOST $p$-value.}
+\label{tab:equivalence}
+\begin{adjustbox}{max width=\textwidth}\begin{tabular}{llccccc}
+\toprule
+Model & Comparison & $n$ & Mean & 90\% CI & $p_{\mathrm{TOST}}$ & Equivalent \\
+\midrule
+\tabinput{generated/tab_equivalence.tex}
+\bottomrule
+\end{tabular}\end{adjustbox}
+\end{table}
+
+\subsection{E0: the branch is mostly a learned constant}
+\label{sec:res-e0}
+
+The branch is not ignored by the optimiser: zeroing its readout raises the
+teacher's \fidlike{} by 19--100\% depending on the dataset, and for the
+PneumoniaMNIST student from 5.8 to 22.2 (Table~\ref{tab:e0}). But almost all of
+this effect comes from a constant. The input-dependent part of the branch has
+5--11\% of the backbone's RMS output (median over $t$), and replacing it with
+its mean changes \fidlike{} by 0--3 points. In these models, the branch adds
+a learned offset to the backbone's output, and the circuit's input dependence
+barely matters. This also explains the insensitivity to shots and noise in
+Section~\ref{sec:res-shots}.
+
+\begin{table}[t]
+\centering\small
+\caption{E0, branch ablations of the campaign's hybrid models (mean over three
+seeds). \texttt{features\_mean} replaces the circuit's output with its mean;
+\texttt{readout\_zeroed} removes the whole branch. Ratios are RMS relative to the
+backbone, median over $t$.}
+\label{tab:e0}
+\begin{adjustbox}{max width=\textwidth}\begin{tabular}{llccccc}
+\toprule
+& & \multicolumn{3}{c}{\fidlike{}} & \multicolumn{2}{c}{RMS / backbone} \\
+\cmidrule(lr){3-5}\cmidrule(lr){6-7}
+Dataset & Model (steps) & full & \texttt{features\_mean} & \texttt{readout\_zeroed} & branch & varying part \\
+\midrule
+\tabinput{generated/tab_e0.tex}
+\bottomrule
+\end{tabular}\end{adjustbox}
+\end{table}
+
+\subsection{E1 and E2: no regime in which the circuit contributes}
+\label{sec:res-sweeps}
+
+E0 suggests that the large backbone leaves the branch nothing to do. E1
+therefore shrinks the backbone, down to removing it ($h=0$), so that the branch
+carries more or all of the model (Figure~\ref{fig:capacity},
+Table~\ref{tab:e1}). E2 then scales the circuit itself with no backbone: 4, 6
+and 8 qubits, depth 2 and 4, with and without data re-uploading
+(Table~\ref{tab:e2}).
+
+\paragraph{Preregistered criteria.} On the primary metric, the circuit
+contributes in 1 of 24 cells and entanglement in 0 of 24. The single pass is
+MNIST with $h=16$ (hybrid 11\% better than the classical branch). There, the
+separable surrogate is equal to the hybrid in every seed (35.2/30.4/46.2
+against 35.2/30.5/44.0), the backbone-only MLP is within noise, and the effect
+reverses on Fashion-MNIST. So the advantage belongs to the separable function,
+which is classically simulable, and is isolated. On the secondary metrics (four-step
+student, 32-step teacher), E1 has 5 passes in 48 tests (4 for the circuit, 1 for
+entanglement), scattered with no pattern in $h$ or dataset and uncorrected for
+multiple comparisons; in E2 the circuit criterion passes only for the teacher at
+4 qubits and depth 4 (with and without re-uploading), where the separable surrogate
+equals the hybrid, and the entanglement criterion never passes.
+
+\paragraph{When the circuit carries the model, it tends to hurt.} With no or a
+tiny backbone on Fashion-MNIST, the classical branch is much better than the
+circuit (ratio 1.54 at $h=0$ and 1.31 at $h=4$). In E2, data re-uploading makes
+every one-step hybrid student worse (ratios 1.43--2.86 against the classical
+branch) and much more variable across seeds, with no consistent effect on the
+teacher. Without re-uploading, more qubits help (one-step \fidlike{} 144, 86, 52
+for 4, 6, 8 qubits at depth 2), but a classical branch of the same width
+improves the same way (139, 73, 55). The gain comes from the width of the
+compressor and readout ($2q$ inputs, $q$ outputs), not from the circuit.
+
+\paragraph{Capacity frontier.} From $h=16$ upward ($h=8$ on MNIST), hybrid models and
+backbone-only MLPs with comparable parameter counts coincide
+(Figure~\ref{fig:capacity}). At $h=0$--4, the hybrid beats a backbone-only MLP
+of similar size, but so does the classical branch: the advantage belongs to
+the compressor--branch--readout structure, not to the circuit.
+
+\paragraph{Distillation needs a backbone.} With $h=0$, distillation fails: the
+one-step students score 131--157 (99 for the Fashion-MNIST classical branch)
+against 52--57 for the 32-step teachers. Without
+a backbone, the student lacks the capacity for the one-step map. With 8 qubits
+and no re-uploading the gap narrows (52.1 against 46.3), and the classical branch
+does the same (55.3).
+
+\paragraph{Per-cell intervals.} Figure~\ref{fig:forest} shows the hybrid/control
+ratio with 90\% intervals for all 48 primary comparisons. With three seeds,
+only 9 cells are individually equivalent within $\pm10\%$; most intervals
+straddle both 1 and the margin. The sweep does not prove equivalence in every
+cell. What it shows is that the 24 point estimates scatter around 1 for the
+surrogate, and around or above 1 for the classical branch.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\textwidth]{figures/fig_capacity.pdf}
+\caption{E1: one-step student \fidlike{} against backbone width, teacher and
+student of the same kind (mean $\pm$ SD, three seeds). The MLP-only network
+needs $h\ge2$; the classical branch is the same at every width because it
+replaces the circuit, not the backbone.}
+\label{fig:capacity}
+\end{figure}
+
+\begin{table}[t]
+\centering\footnotesize
+\setlength{\tabcolsep}{4pt}
+\caption{E1, capacity sweep (4 qubits, depth 2). One-step student \fidlike{}
+(mean $\pm$ SD, three seeds), parameters of the hybrid network, and the ratio of
+means hybrid/control ($<1$ favours the circuit). $^\ast$: preregistered criterion
+met.}
+\label{tab:e1}
+\begin{adjustbox}{max width=\textwidth}\begin{tabular}{llccccccc}
+\toprule
+Dataset & $h$ & Params & Hybrid & Surrogate & Classical branch & MLP only & hyb./cl.\ br. & hyb./sur. \\
+\midrule
+\tabinput{generated/tab_e1.tex}
+\bottomrule
+\end{tabular}\end{adjustbox}
+\end{table}
+
+\begin{table}[t]
+\centering\footnotesize
+\setlength{\tabcolsep}{4pt}
+\caption{E2, circuit scaling without backbone (MNIST, $h=0$). One-step student
+\fidlike{} for hybrid, surrogate and classical branch (the classical branch
+depends only on $q$), the 32-step hybrid teacher, and ratios as in
+Table~\ref{tab:e1}. RU: data re-uploading.}
+\label{tab:e2}
+\begin{adjustbox}{max width=\textwidth}\begin{tabular}{cccccccccc}
+\toprule
+$q$ & Depth & RU & Hybrid & Surrogate & Classical branch & Teacher (32) & hyb./cl.\ br. & hyb./sur. \\
+\midrule
+\tabinput{generated/tab_e2.tex}
+\bottomrule
+\end{tabular}\end{adjustbox}
+\end{table}
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\textwidth]{figures/fig_forest.pdf}
+\caption{Ratio of one-step student \fidlike{} (hybrid / control) with paired
+90\% $t$-intervals over three seeds, for every preregistered primary comparison
+in E1 and E2. Shaded band: $\pm10\%$ equivalence margin. Intervals are clipped at
+the axis limits.}
+\label{fig:forest}
+\end{figure}
+
+\subsection{E3: shots and noise}
+\label{sec:res-shots}
+
+We evaluated noiselessly trained MNIST models with finite shots and local
+depolarising noise at inference. Each circuit evaluation is simulated as a
+density matrix with depolarising probability $p$ on every qubit after the
+encoding and after each trainable layer; all qubits are measured in the
+computational basis with $S$ shots per evaluation, and $\langle Z_j\rangle$ are
+estimated from the counts. Table~\ref{tab:e3} and Figure~\ref{fig:shots} show
+$p\in\{0,0.03\}$ and $S\in\{\text{exact},64\}$; the full grid
+($p\in\{0,0.001,0.01,0.03\}$, $S\in\{\text{exact},1024,256,64\}$) is in the
+repository.
+
+With the backbone ($h=128$), 64 shots and $p=0.03$ leave \fidlike{} unchanged.
+This is what E0 predicts: the input-dependent part of the circuit hardly
+matters. At an equal total shot budget, the distilled student wins: one step
+with 64 shots (64 shots per sample) gives 27.9, against 52.2 for the
+four-step teacher (256 shots per sample); the 32-step teacher needs 2{,}048
+shots per sample to reach 24.7. Distillation therefore does reduce quantum cost,
+but for a circuit that, in this model, could be removed. Without the backbone,
+distillation fails (Section~\ref{sec:res-sweeps}) and the teacher wins at every
+budget. Noise shifts the student by small amounts in both directions (sometimes
+improving \fidlike{}, likely by adding variance), which is not evidence of
+robustness.
+
+\begin{table}[t]
+\centering\small
+\caption{E3, MNIST, mean over three seeds. Models trained noiselessly; noise and
+shots only at inference.}
+\label{tab:e3}
+\begin{adjustbox}{max width=\textwidth}\begin{tabular}{ccccccccc}
+\toprule
+& & & \multicolumn{3}{c}{Teacher steps} & \multicolumn{3}{c}{Student steps} \\
+\cmidrule(lr){4-6}\cmidrule(lr){7-9}
+$h$ & $p$ & Shots & 4 & 8 & 32 & 1 & 2 & 4 \\
+\midrule
+\tabinput{generated/tab_e3.tex}
+\bottomrule
+\end{tabular}\end{adjustbox}
+\end{table}
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.9\textwidth]{figures/fig_shots.pdf}
+\caption{E3: \fidlike{} against total shots per sample at 64 shots per circuit
+evaluation, noiseless ($p=0$) and with local depolarising noise ($p=0.03$).
+Mean over three seeds.}
+\label{fig:shots}
+\end{figure}
+
+\subsection{E4: why students degrade with steps, and the KMNIST bottleneck}
+\label{sec:res-e4}
+
+\paragraph{Multi-step degradation (E4a).} Measured against the endpoint of the
+teacher's full DDIM trajectory from the same $z_t$, the student's error is small
+at every $t$ (latent MSE 0.0003 at $t=1$ and 0.028 at $t=32$ on MNIST, against a
+signal energy of about 1). The error is the same when the input is the
+student's own re-noised output, so per-step error does not explain the
+degradation. Instead, a growing fraction of samples diverges when the student is
+applied repeatedly (Table~\ref{tab:e4a}): the median latent energy stays near 1,
+but the tail explodes (maxima of $10^3$--$10^5$ at 32 steps), consistent with
+the growing pixel variance we observed. Clipping or rescaling the latent
+between steps, or training on the student's own re-noised predictions, are
+possible fixes that we did not test. Hybrid and surrogate students behave the
+same.
+
+\begin{table}[t]
+\centering\small
+\caption{E4a: fraction of generated latents with energy $\|z\|^2/d>4$ after
+$k$ steps (mean over three seeds).}
+\label{tab:e4a}
+\begin{adjustbox}{max width=\textwidth}\begin{tabular}{llccccc}
+\toprule
+Dataset & Model & 1 & 4 & 8 & 16 & 32 \\
+\midrule
+\tabinput{generated/tab_e4a.tex}
+\bottomrule
+\end{tabular}\end{adjustbox}
+\end{table}
+
+\paragraph{KMNIST is limited by the autoencoder (E4b).} With a 16-dimensional
+latent, encoding and decoding real KMNIST test images already gives a
+\fidlike{} of 204, about the same as generation (Table~\ref{tab:e4b}; 512 other
+real images score 13.7). With a 64-dimensional latent, reconstruction falls to
+25 and the bottleneck moves to the denoiser, where distillation still holds (one-step
+student 124.6 against 113.8 for the 32-step teacher).
+
+\begin{table}[t]
+\centering\small
+\caption{E4b, KMNIST: \fidlike{} of autoencoder reconstructions and of generation
+(hybrid teacher, classical student) against latent dimension. Mean $\pm$ SD over
+three seeds.}
+\label{tab:e4b}
+\begin{adjustbox}{max width=\textwidth}\begin{tabular}{cccccc}
+\toprule
+Latent & Reconstruction & Teacher 32 & Teacher 4 & Student 1 & Student 4 \\
+\midrule
+\tabinput{generated/tab_e4b.tex}
+\bottomrule
+\end{tabular}\end{adjustbox}
+\end{table}
+
+% ---------------------------------------------------------------------------
+\section{Discussion}
+\label{sec:discussion}
+
+\paragraph{What the controls rule out.} The equivalence of hybrid and classical
+models could have had several explanations: the optimiser could ignore the
+branch, the circuit could compute something useful that a classical branch also
+computes, or entanglement could matter but be too weak to detect. The controls
+separate these. The branch is used (zeroing it hurts) but mainly as a constant
+(E0). A classical layer of the same shape matches or beats the circuit, so what
+the circuit computes is reproducible classically (E1, E2). The exact separable
+surrogate matches the entangled circuit in every pooled comparison and every
+preregistered cell, so entanglement does not change the learned function in
+these models.
+
+The last result is plausible from the structure of the model. The compressor
+maps a 19-dimensional input to $2q$ angles, each used once (without re-uploading),
+so each $\langle Z_j\rangle$ is a low-degree trigonometric polynomial in those
+angles \citep{schuld2021encoding}, followed by a learned linear readout. A
+compressor and readout that are trained jointly with the circuit can absorb much
+of what the circuit's entangling layers would add. Re-uploading raises the
+available frequencies \citep{perezsalinas2020reuploading} but, here, mainly
+made optimisation harder.
+
+\paragraph{What remains.} Consistency distillation of a hybrid teacher is
+effective and reduces circuit evaluations by $32\times$ at equal quality. At equal
+shot budget it is better than shortening the teacher's DDIM schedule. This would
+matter for any model in which the circuit could not be replaced. In the model
+family studied here, it can be.
+
+\paragraph{Implications for benchmarking.} Hybrid generative models are often
+compared to classical models with a similar number of parameters. In our sweep,
+this comparison favoured the hybrid model at small $h$, while a classical branch
+of the same shape showed that the circuit was not the reason. We suggest that
+claims of a benefit from a circuit should be accompanied by (i) a classical
+block with the same inputs and outputs in the same place, (ii) an exact
+separable surrogate when entanglement is claimed to matter, and (iii) an
+ablation that replaces the circuit's output by its mean, which distinguishes a
+learned bias from an input-dependent computation. All three are cheap.
+
+\paragraph{Limitations.} The results hold for one architecture: an additive
+branch on a classical MLP in a 16-dimensional autoencoder latent, with 4--8
+qubits, depth up to 4, angle encoding and a hardware-efficient ansatz. Other
+placements, encodings or ans\"atze could behave differently. Each cell has three
+seeds and 512 samples; per-cell intervals are wide and the pooled tests treat
+dataset--seed pairs as independent. The equivalence analysis and its margin were
+chosen after the preregistered runs, although the margin equals the
+preregistered threshold. There is no correction for multiple comparisons in
+the per-cell criteria. \fidlike{} uses features of a small classifier and is
+not comparable to standard FID. Noise was applied only at inference, with a
+simple local depolarising model and no readout error or crosstalk; training
+with shots or noise was not tested. We could not read the full text of the
+closest consistency-based quantum diffusion model \citep{zhang2025oqiddm}.
+Finally, our circuits are small enough to simulate exactly, so nothing here
+bears on regimes where simulation is hard.
+
+\paragraph{Reproducibility and history.} An earlier version of this project
+(\texttt{v1/} in the repository) used a classical teacher and an earlier
+training procedure. It contained implementation errors, documented in the
+repository, and its raw outputs could not be fully recovered; none of its
+numbers are used here. Every number in this paper is regenerated from the
+committed JSON reports by \texttt{paper/analysis/make\_assets.py}; training and
+evaluation code, configurations, the preregistration and environment records
+are in \texttt{v2/}.
+
+% ---------------------------------------------------------------------------
+\section{Conclusion}
+
+We distilled hybrid quantum latent diffusion teachers into one-step consistency
+students and asked, with controls that isolate the circuit, whether the circuit
+contributes. Distillation transferred across four datasets: the one-step
+student matched the 32-step teacher, reduced circuit evaluations by $32\times$,
+and won at equal shot budget. The circuit did not contribute: hybrid,
+no-entanglement and classical models were equivalent within $\pm10\%$ in pooled
+tests, the trained branch acted mostly as a learned constant, and across 24
+preregistered capacity and scaling cells no regime showed a contribution that a
+size-matched classical control or an exact separable surrogate did not
+reproduce. We see this as a negative result for one model family and as a case
+for including such controls in hybrid generative benchmarks. Natural next steps
+are architectures in which the circuit cannot be bypassed, such as models of
+quantum data \citep{zhang2023quddpm}, where distilling a few-step student would
+reduce a cost that cannot be avoided classically.
+
+\bibliographystyle{unsrtnat}
+\bibliography{references}
+
+\end{document}
