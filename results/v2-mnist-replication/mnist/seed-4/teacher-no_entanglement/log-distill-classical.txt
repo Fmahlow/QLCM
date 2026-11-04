@@ -1,0 +1,1 @@
+Completed distill at /home/mahlow/QLCM/results/v2-mnist-replication/mnist/seed-4/teacher-no_entanglement

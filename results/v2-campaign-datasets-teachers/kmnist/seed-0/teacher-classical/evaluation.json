@@ -1,0 +1,511 @@
+{
+  "scope": "pilot evaluation",
+  "config": {
+    "dataset": "kmnist",
+    "max_samples": 10000,
+    "latent": 16,
+    "hidden": 128,
+    "qubits": 4,
+    "depth": 2,
+    "timesteps": 32,
+    "batch": 64,
+    "ae_epochs": 20,
+    "teacher_epochs": 150,
+    "student_epochs": 200,
+    "ema_decay": 0.95,
+    "seed": 0,
+    "device": "cuda",
+    "samples": 512,
+    "evaluation_steps": [
+      1,
+      2,
+      4,
+      8,
+      16,
+      32
+    ],
+    "teacher_kind": "classical"
+  },
+  "rows": [
+    {
+      "model": "teacher",
+      "steps": 1,
+      "samples": 512,
+      "parameters": 21136,
+      "quantum_circuit_evaluations_per_sample": 0,
+      "quantum_circuit_evaluations_total": 0,
+      "hardware_shots": null,
+      "hardware_noise": false,
+      "simulation": "exact statevector or algebraic/classical",
+      "pixel_variance": 0.0015500157605856657,
+      "timing": {
+        "seconds": [
+          0.0007876548916101456,
+          0.0007578080985695124,
+          0.0007528671994805336,
+          0.0007441539783030748,
+          0.0007410941179841757
+        ],
+        "median_seconds": 0.0007528671994805336,
+        "warmup": 2,
+        "repeats": 5
+      },
+      "fid_like_classifier_features": 1203.2690394383512,
+      "classifier_mean_confidence": 0.2998000979423523,
+      "label_entropy": 0.3066755412924503,
+      "label_entropy_max_bits": 2.302585092994046,
+      "predicted_label_histogram": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        47,
+        465,
+        0,
+        0
+      ]
+    },
+    {
+      "model": "teacher",
+      "steps": 2,
+      "samples": 512,
+      "parameters": 21136,
+      "quantum_circuit_evaluations_per_sample": 0,
+      "quantum_circuit_evaluations_total": 0,
+      "hardware_shots": null,
+      "hardware_noise": false,
+      "simulation": "exact statevector or algebraic/classical",
+      "pixel_variance": 0.003185657551512122,
+      "timing": {
+        "seconds": [
+          0.0010883710347115993,
+          0.0010755460243672132,
+          0.0010634029749780893,
+          0.0010706139728426933,
+          0.0010583288967609406
+        ],
+        "median_seconds": 0.0010706139728426933,
+        "warmup": 2,
+        "repeats": 5
+      },
+      "fid_like_classifier_features": 1175.9225727380585,
+      "classifier_mean_confidence": 0.3044949173927307,
+      "label_entropy": 0.5822528662653448,
+      "label_entropy_max_bits": 2.302585092994046,
+      "predicted_label_histogram": [
+        0,
+        0,
+        7,
+        0,
+        0,
+        2,
+        98,
+        405,
+        0,
+        0
+      ]
+    },
+    {
+      "model": "teacher",
+      "steps": 4,
+      "samples": 512,
+      "parameters": 21136,
+      "quantum_circuit_evaluations_per_sample": 0,
+      "quantum_circuit_evaluations_total": 0,
+      "hardware_shots": null,
+      "hardware_noise": false,
+      "simulation": "exact statevector or algebraic/classical",
+      "pixel_variance": 0.1475059688091278,
+      "timing": {
+        "seconds": [
+          0.0016475929878652096,
+          0.0016844337806105614,
+          0.0016516640316694975,
+          0.0016596668865531683,
+          0.0016558889765292406
+        ],
+        "median_seconds": 0.0016558889765292406,
+        "warmup": 2,
+        "repeats": 5
+      },
+      "fid_like_classifier_features": 402.73087089780194,
+      "classifier_mean_confidence": 0.7083269357681274,
+      "label_entropy": 2.217482866125383,
+      "label_entropy_max_bits": 2.302585092994046,
+      "predicted_label_histogram": [
+        25,
+        75,
+        51,
+        47,
+        22,
+        99,
+        59,
+        42,
+        43,
+        49
+      ]
+    },
+    {
+      "model": "teacher",
+      "steps": 8,
+      "samples": 512,
+      "parameters": 21136,
+      "quantum_circuit_evaluations_per_sample": 0,
+      "quantum_circuit_evaluations_total": 0,
+      "hardware_shots": null,
+      "hardware_noise": false,
+      "simulation": "exact statevector or algebraic/classical",
+      "pixel_variance": 0.20278720557689667,
+      "timing": {
+        "seconds": [
+          0.0028441010508686304,
+          0.002866639057174325,
+          0.0028740849811583757,
+          0.0028475180733948946,
+          0.0028556608594954014
+        ],
+        "median_seconds": 0.0028556608594954014,
+        "warmup": 2,
+        "repeats": 5
+      },
+      "fid_like_classifier_features": 279.2768521644038,
+      "classifier_mean_confidence": 0.7685003280639648,
+      "label_entropy": 2.225753135828078,
+      "label_entropy_max_bits": 2.302585092994046,
+      "predicted_label_histogram": [
+        32,
+        68,
+        44,
+        45,
+        28,
+        105,
+        51,
+        35,
+        45,
+        59
+      ]
+    },
+    {
+      "model": "teacher",
+      "steps": 16,
+      "samples": 512,
+      "parameters": 21136,
+      "quantum_circuit_evaluations_per_sample": 0,
+      "quantum_circuit_evaluations_total": 0,
+      "hardware_shots": null,
+      "hardware_noise": false,
+      "simulation": "exact statevector or algebraic/classical",
+      "pixel_variance": 0.228201761841774,
+      "timing": {
+        "seconds": [
+          0.005264280829578638,
+          0.005269024055451155,
+          0.005224814871326089,
+          0.005248339846730232,
+          0.005344385979697108
+        ],
+        "median_seconds": 0.005264280829578638,
+        "warmup": 2,
+        "repeats": 5
+      },
+      "fid_like_classifier_features": 239.02785219243913,
+      "classifier_mean_confidence": 0.786103367805481,
+      "label_entropy": 2.235219359146245,
+      "label_entropy_max_bits": 2.302585092994046,
+      "predicted_label_histogram": [
+        34,
+        61,
+        43,
+        48,
+        27,
+        101,
+        50,
+        35,
+        52,
+        61
+      ]
+    },
+    {
+      "model": "teacher",
+      "steps": 32,
+      "samples": 512,
+      "parameters": 21136,
+      "quantum_circuit_evaluations_per_sample": 0,
+      "quantum_circuit_evaluations_total": 0,
+      "hardware_shots": null,
+      "hardware_noise": false,
+      "simulation": "exact statevector or algebraic/classical",
+      "pixel_variance": 0.24048730731010437,
+      "timing": {
+        "seconds": [
+          0.00998063595034182,
+          0.009977736975997686,
+          0.010000175097957253,
+          0.010013965889811516,
+          0.010036940919235349
+        ],
+        "median_seconds": 0.01000017486512661,
+        "warmup": 2,
+        "repeats": 5
+      },
+      "fid_like_classifier_features": 222.29603337952912,
+      "classifier_mean_confidence": 0.7936810851097107,
+      "label_entropy": 2.23895521392907,
+      "label_entropy_max_bits": 2.302585092994046,
+      "predicted_label_histogram": [
+        34,
+        58,
+        43,
+        50,
+        29,
+        101,
+        50,
+        35,
+        52,
+        60
+      ]
+    },
+    {
+      "model": "classical",
+      "steps": 1,
+      "samples": 512,
+      "parameters": 21136,
+      "quantum_circuit_evaluations_per_sample": 0,
+      "quantum_circuit_evaluations_total": 0,
+      "hardware_shots": null,
+      "hardware_noise": false,
+      "simulation": "exact statevector or algebraic/classical",
+      "pixel_variance": 0.2441026270389557,
+      "timing": {
+        "seconds": [
+          0.0006787332240492105,
+          0.0006725641433149576,
+          0.0006752549670636654,
+          0.0006826519966125488,
+          0.0006749739404767752
+        ],
+        "median_seconds": 0.0006752549670636654,
+        "warmup": 2,
+        "repeats": 5
+      },
+      "fid_like_classifier_features": 228.6015720803597,
+      "classifier_mean_confidence": 0.7803033590316772,
+      "label_entropy": 2.2194388846926585,
+      "label_entropy_max_bits": 2.302585092994046,
+      "predicted_label_histogram": [
+        26,
+        58,
+        41,
+        55,
+        34,
+        112,
+        49,
+        36,
+        45,
+        56
+      ]
+    },
+    {
+      "model": "classical",
+      "steps": 2,
+      "samples": 512,
+      "parameters": 21136,
+      "quantum_circuit_evaluations_per_sample": 0,
+      "quantum_circuit_evaluations_total": 0,
+      "hardware_shots": null,
+      "hardware_noise": false,
+      "simulation": "exact statevector or algebraic/classical",
+      "pixel_variance": 0.24646291136741638,
+      "timing": {
+        "seconds": [
+          0.001011948101222515,
+          0.0010027270764112473,
+          0.0010137900244444609,
+          0.000993208959698677,
+          0.0009990159887820482
+        ],
+        "median_seconds": 0.0010027270764112473,
+        "warmup": 2,
+        "repeats": 5
+      },
+      "fid_like_classifier_features": 225.761775371709,
+      "classifier_mean_confidence": 0.7861721515655518,
+      "label_entropy": 2.235241943149857,
+      "label_entropy_max_bits": 2.302585092994046,
+      "predicted_label_histogram": [
+        27,
+        60,
+        42,
+        54,
+        41,
+        105,
+        46,
+        35,
+        50,
+        52
+      ]
+    },
+    {
+      "model": "classical",
+      "steps": 4,
+      "samples": 512,
+      "parameters": 21136,
+      "quantum_circuit_evaluations_per_sample": 0,
+      "quantum_circuit_evaluations_total": 0,
+      "hardware_shots": null,
+      "hardware_noise": false,
+      "simulation": "exact statevector or algebraic/classical",
+      "pixel_variance": 0.253559410572052,
+      "timing": {
+        "seconds": [
+          0.0016374769620597363,
+          0.0016461291816085577,
+          0.001626397017389536,
+          0.0016179380472749472,
+          0.001650302903726697
+        ],
+        "median_seconds": 0.0016374769620597363,
+        "warmup": 2,
+        "repeats": 5
+      },
+      "fid_like_classifier_features": 224.88055267879685,
+      "classifier_mean_confidence": 0.7789392471313477,
+      "label_entropy": 2.2133891692948886,
+      "label_entropy_max_bits": 2.302585092994046,
+      "predicted_label_histogram": [
+        23,
+        51,
+        49,
+        49,
+        34,
+        118,
+        47,
+        48,
+        45,
+        48
+      ]
+    },
+    {
+      "model": "classical",
+      "steps": 8,
+      "samples": 512,
+      "parameters": 21136,
+      "quantum_circuit_evaluations_per_sample": 0,
+      "quantum_circuit_evaluations_total": 0,
+      "hardware_shots": null,
+      "hardware_noise": false,
+      "simulation": "exact statevector or algebraic/classical",
+      "pixel_variance": 0.25644102692604065,
+      "timing": {
+        "seconds": [
+          0.002890869975090027,
+          0.0028898019809275866,
+          0.0028883840423077345,
+          0.0029298521112650633,
+          0.0028865779750049114
+        ],
+        "median_seconds": 0.0028898019809275866,
+        "warmup": 2,
+        "repeats": 5
+      },
+      "fid_like_classifier_features": 227.81808009164126,
+      "classifier_mean_confidence": 0.8100935816764832,
+      "label_entropy": 2.2141248488610397,
+      "label_entropy_max_bits": 2.302585092994046,
+      "predicted_label_histogram": [
+        29,
+        51,
+        60,
+        61,
+        18,
+        106,
+        51,
+        46,
+        42,
+        48
+      ]
+    },
+    {
+      "model": "classical",
+      "steps": 16,
+      "samples": 512,
+      "parameters": 21136,
+      "quantum_circuit_evaluations_per_sample": 0,
+      "quantum_circuit_evaluations_total": 0,
+      "hardware_shots": null,
+      "hardware_noise": false,
+      "simulation": "exact statevector or algebraic/classical",
+      "pixel_variance": 0.28180572390556335,
+      "timing": {
+        "seconds": [
+          0.005504612810909748,
+          0.005464181071147323,
+          0.005434538004919887,
+          0.0054138831328600645,
+          0.0054445890709757805
+        ],
+        "median_seconds": 0.0054445890709757805,
+        "warmup": 2,
+        "repeats": 5
+      },
+      "fid_like_classifier_features": 214.85730264492057,
+      "classifier_mean_confidence": 0.8051987886428833,
+      "label_entropy": 2.2016491275808194,
+      "label_entropy_max_bits": 2.302585092994046,
+      "predicted_label_histogram": [
+        36,
+        46,
+        67,
+        57,
+        25,
+        117,
+        50,
+        33,
+        34,
+        47
+      ]
+    },
+    {
+      "model": "classical",
+      "steps": 32,
+      "samples": 512,
+      "parameters": 21136,
+      "quantum_circuit_evaluations_per_sample": 0,
+      "quantum_circuit_evaluations_total": 0,
+      "hardware_shots": null,
+      "hardware_noise": false,
+      "simulation": "exact statevector or algebraic/classical",
+      "pixel_variance": 0.3120112419128418,
+      "timing": {
+        "seconds": [
+          0.010473147965967655,
+          0.010476083029061556,
+          0.010427302913740277,
+          0.01042184978723526,
+          0.010453302878886461
+        ],
+        "median_seconds": 0.010453302413225174,
+        "warmup": 2,
+        "repeats": 5
+      },
+      "fid_like_classifier_features": 195.4234121271917,
+      "classifier_mean_confidence": 0.8170968294143677,
+      "label_entropy": 2.2063744431227734,
+      "label_entropy_max_bits": 2.302585092994046,
+      "predicted_label_histogram": [
+        19,
+        56,
+        66,
+        57,
+        27,
+        106,
+        53,
+        50,
+        33,
+        45
+      ]
+    }
+  ]
+}

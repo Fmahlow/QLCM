@@ -1,0 +1,44 @@
+{
+  "passed": true,
+  "heuristic_default": true,
+  "row": {
+    "model": "teacher",
+    "steps": 32,
+    "samples": 512,
+    "parameters": 21136,
+    "quantum_circuit_evaluations_per_sample": 0,
+    "quantum_circuit_evaluations_total": 0,
+    "hardware_shots": null,
+    "hardware_noise": false,
+    "simulation": "exact statevector or algebraic/classical",
+    "pixel_variance": 0.20959129929542542,
+    "timing": {
+      "seconds": [
+        0.03138611791655421,
+        0.02883902913890779,
+        0.02966963197104633,
+        0.029386426089331508,
+        0.029779891949146986
+      ],
+      "median_seconds": 0.029669631272554398,
+      "warmup": 2,
+      "repeats": 5
+    },
+    "fid_like_classifier_features": 26.02661155751096,
+    "classifier_mean_confidence": 0.8431600332260132,
+    "label_entropy": 2.2825371072237592,
+    "label_entropy_max_bits": 2.302585092994046,
+    "predicted_label_histogram": [
+      48,
+      65,
+      47,
+      41,
+      64,
+      55,
+      37,
+      57,
+      37,
+      61
+    ]
+  }
+}

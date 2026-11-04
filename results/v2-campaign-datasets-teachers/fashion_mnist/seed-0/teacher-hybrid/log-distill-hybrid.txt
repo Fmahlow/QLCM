@@ -1,0 +1,1 @@
+Completed distill at /home/mahlow/QLCM/results/v2-campaign-datasets-teachers/fashion_mnist/seed-0/teacher-hybrid

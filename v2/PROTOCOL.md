@@ -241,3 +241,10 @@ mostrar as duas versões.
 
 **Grade de amostras (TODO 6).** Figura qualitativa com amostras do teacher (32), estudante
 hybrid (1) e estudante classical (1), seed 0, nos 4 datasets.
+
+*Adendo post hoc ao E7 (2026-11-04, depois da primeira execução do `review_eval`).* No MNIST o piso
+real-vs-real pré-registrado (5.000 imagens de teste contra as outras 5.000) deu FID-like 17,3, acima do
+teacher (16,1): as duas metades do teste do MNIST vêm de populações de escritores diferentes e não são
+intercambiáveis. Mantemos o piso pré-registrado e acrescentamos um segundo, marcado como post hoc:
+imagens de treino nunca vistas pelo AE/teacher (índices 10.000-15.000) contra a mesma referência
+(não existe no PneumoniaMNIST, cujo treino inteiro é usado).

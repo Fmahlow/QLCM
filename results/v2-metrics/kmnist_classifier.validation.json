@@ -1,0 +1,21 @@
+{
+  "checkpoint_sha256": "aa7f5fbd4cfde646e3b300032fa7bfcac360700e6f856e5155e98d06e4d5c194",
+  "dataset": "kmnist",
+  "heldout": true,
+  "test_accuracy": 0.9317,
+  "samples": 10000,
+  "real_mean_confidence": 0.9503970645904541,
+  "train_label_counts": [
+    987,
+    1003,
+    989,
+    1010,
+    1061,
+    1008,
+    982,
+    985,
+    967,
+    1008
+  ],
+  "train_label_entropy": 2.3022937774658203
+}

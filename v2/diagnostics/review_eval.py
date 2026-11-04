@@ -36,14 +36,18 @@ LATENT_NOISE = (0.05, 0.1, 0.2, 0.4)
 
 # ------------------------------------------------------------------ real data
 def real_sets(dataset, n):
-    """Reference and floor image sets (disjoint)."""
+    """Reference and floor image sets (disjoint). The third set is a post hoc floor (added after the first run,
+    see PROTOCOL.md): training images never seen by the AE/teacher (indices 10,000-15,000), because the two halves
+    of the MNIST-family test sets are not exchangeable. PneumoniaMNIST has no unused training images (None)."""
     if dataset == 'pneumoniamnist':
         raw = np.load(ROOT / 'data/medmnist/pneumoniamnist.npz')
         conv = lambda a: torch.from_numpy(a).float().div(255).mul(2).sub(1).unsqueeze(1)
-        return conv(raw['test_images']), conv(raw['val_images'])
+        return conv(raw['test_images']), conv(raw['val_images']), None
     test = build_dataset(dataset, root=str(ROOT / 'data'), train=False)
     images = torch.stack([test[i][0] for i in range(len(test))])
-    return images[:n], images[n:2 * n]
+    train = build_dataset(dataset, root=str(ROOT / 'data'), train=True)
+    unseen = torch.stack([train[i][0] for i in range(10000, 10000 + n)])
+    return images[:n], images[n:2 * n], unseen
 
 
 # ------------------------------------------------------------------ metrics
@@ -170,7 +174,7 @@ def perturbed(model, kind, value, mean=None, seed=0):
 
 
 # ------------------------------------------------------------------ main loop
-def evaluate_seed(args, dataset, seed, device, classifier, ref_images, floor_images, ref_latent_cache):
+def evaluate_seed(args, dataset, seed, device, classifier, ref_images, floor_images, unseen_images):
     base = Path(args.campaign) / dataset / f'seed-{seed}'
     out = Path(args.output) / dataset / f'seed-{seed}.json'
     if out.exists(): return json.loads(out.read_text())
@@ -187,6 +191,9 @@ def evaluate_seed(args, dataset, seed, device, classifier, ref_images, floor_ima
     score = Scorer(classifier, ref_images, ref_lat, device)
     rows = [dict(model='real (floor)', sampler='-', steps=0, **score(floor_images, floor_lat)),
             dict(model='AE reconstruction (floor)', sampler='-', steps=0, **score(recon.cpu(), None))]
+    if unseen_images is not None:
+        with torch.no_grad(): unseen_lat = enc(unseen_images)
+        rows.append(dict(model='real unseen train (floor, post hoc)', sampler='-', steps=0, **score(unseen_images, unseen_lat)))
     torch.manual_seed(seed); noise = torch.randn(args.n, c['latent'], device=device)
 
     def run(label, model, sampler, steps, fn, extra=None):
@@ -254,9 +261,9 @@ def main():
     device = torch.device(a.device); results = []; torch.set_grad_enabled(False)
     for dataset in a.datasets.split(','):
         classifier = SmallClassifier().to(device); classifier.load_state_dict(load(Path(a.classifier_dir) / f'{dataset}_classifier.pt', device)); classifier.eval()
-        ref, floor = real_sets(dataset, a.n)
+        ref, floor, unseen = real_sets(dataset, a.n)
         for seed in [int(s) for s in a.seeds.split(',')]:
-            results.append(evaluate_seed(a, dataset, seed, device, classifier, ref, floor, None))
+            results.append(evaluate_seed(a, dataset, seed, device, classifier, ref, floor, unseen))
     report = {'scope': 'E6/E7/E8 of the 2026-11-04 preregistration (inference only, retrained campaign)', 'n_generated': a.n,
               'metrics': 'FID-like and P/R(k=3) in classifier features; latent Frechet and unbiased RBF-MMD in normalized AE latent',
               'results': results}
