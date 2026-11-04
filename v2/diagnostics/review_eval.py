@@ -32,6 +32,7 @@ from src.eval_metrics import SmallClassifier, frechet_distance
 
 SCALES = (0.0, 0.5, 1.5, 2.0, 3.0)
 LATENT_NOISE = (0.05, 0.1, 0.2, 0.4)
+CONTAMINATION = (0.02, 0.05, 0.1, 0.2)   # post hoc
 
 
 # ------------------------------------------------------------------ real data
@@ -167,6 +168,8 @@ def perturbed(model, kind, value, mean=None, seed=0):
     model = copy.deepcopy(model); network = network_of(model); original = network.branch
     if kind == 'scale':
         network.branch = lambda f: mean + value * (original(f) - mean)
+    elif kind == 'readout_zeroed':  # post hoc: removes the whole branch, including its learned constant (E0)
+        network.branch = lambda f: torch.zeros_like(original(f))
     else:  # permutation of branch outputs across the samples of the batch
         g = torch.Generator(device=mean.device).manual_seed(seed)
         network.branch = lambda f: original(f)[torch.randperm(len(f), generator=g, device=f.device)]
@@ -240,8 +243,18 @@ def evaluate_seed(args, dataset, seed, device, classifier, ref_images, floor_ima
                 run(label, m, 'perturb_scale', st, lambda: sample_latents(m, schedule, noise, st, is_teacher), {'teacher_kind': tk, 'perturbation': 'scale', 'value': a})
             m = perturbed(model, 'shuffle', None, mean, seed)
             run(label, m, 'perturb_shuffle', st, lambda: sample_latents(m, schedule, noise, st, is_teacher), {'teacher_kind': tk, 'perturbation': 'shuffle', 'value': None})
+            m = perturbed(model, 'readout_zeroed', None, mean)
+            run(label, m, 'perturb_readout_zeroed', st, lambda: sample_latents(m, schedule, noise, st, is_teacher), {'teacher_kind': tk, 'perturbation': 'readout_zeroed', 'value': None, 'post_hoc': True})
             torch.manual_seed(seed + 1)
             with torch.no_grad(): clean = sample_latents(model, schedule, noise, st, is_teacher)
+            # Post hoc contamination control: a known fraction p of the samples replaced by 2-step DDIM samples of the
+            # same teacher (a degenerate sampler), i.e. a degradation of known size and direction.
+            torch.manual_seed(seed + 1)
+            with torch.no_grad(): bad = sample_latents(teacher, schedule, noise, 2, True)
+            for frac in CONTAMINATION:
+                k = int(round(frac * len(clean))); lat = torch.cat([bad[:k], clean[k:]])
+                rows.append(dict(model=label, sampler='perturb_contamination', steps=st, teacher_kind=tk, perturbation='contamination', value=frac,
+                                 post_hoc=True, **score(decode(lat).cpu(), lat)))
             for sd in LATENT_NOISE:
                 g = torch.Generator(device=device).manual_seed(seed + 11)
                 lat = clean + sd * torch.randn(clean.shape, generator=g, device=device)

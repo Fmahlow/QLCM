@@ -248,3 +248,10 @@ teacher (16,1): as duas metades do teste do MNIST vêm de populações de escrit
 intercambiáveis. Mantemos o piso pré-registrado e acrescentamos um segundo, marcado como post hoc:
 imagens de treino nunca vistas pelo AE/teacher (índices 10.000-15.000) contra a mesma referência
 (não existe no PneumoniaMNIST, cujo treino inteiro é usado).
+
+*Adendo post hoc ao E6 (2026-11-04, depois de ver o E6).* As perturbações pré-registradas não produzem
+uma degradação de tamanho conhecido: mudar o ramo altera o FID-like em 1-7% (o ramo pesa pouco, como no
+E0) e o ruído no latente *melhora* o FID-like (as amostras são subdispersas; o ruído aumenta a dispersão).
+Para mostrar sensibilidade a uma mudança de ~10% acrescentamos dois controles de efeito conhecido, marcados
+como post hoc: (d) readout zerado (remove o ramo inteiro, como no E0) e (e) contaminação de uma fração
+p em {2, 5, 10, 20}% das amostras por amostras do mesmo teacher em 2 passos DDIM (amostrador degenerado).
