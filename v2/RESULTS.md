@@ -371,3 +371,34 @@ uma camada clássica sem perda.
 Limitações: 3 seeds, 512 amostras, FID-like de classificador pequeno, sem teste de
 equivalência nem correção para comparações múltiplas; só uma arquitetura de ramo
 aditivo; até 8 qubits; ruído apenas na inferência.
+
+## Revisão: controles e robustez (E5-E10) — 2026-11-04
+
+Pré-registro em `PROTOCOL.md` (seção de 2026-11-04, commit 538048d, antes de qualquer execução;
+adendos post hoc marcados). Servidor novo, mesma GPU e torch. Checkpoints antigos perdidos: a
+campanha foi retreinada do zero (36/36 gates, 0 falhas) e reproduz a original em até 1% de
+FID-like no MNIST/KMNIST/PneumoniaMNIST; no Fashion-MNIST todos os modelos sobem 4-5% juntos
+(classificador retreinado). Relatórios compactos em `v2/reports/review-2026-11/`; tabelas e
+números do artigo saem de `paper/analysis/make_assets.py`. Com o circuito fundido, a fase
+inteira (campanha, replicação, E6-E10) levou ~3h15 na RTX 3080 Ti.
+
+- **E5, replicação MNIST (seeds 3-7):** equivalências se repetem (estudante 1 passo hybrid vs
+  classical -0,7% [-2,2; +0,9]; vs surrogate +0,3%; teacher hybrid vs classical -2,5%). O critério
+  de destilação não: estudante 1 passo +9,1% [+6,8; +11,4] pior que o teacher 32, 3/5 seeds dentro
+  de 10%.
+- **E6, controle positivo:** perturbações do ramo mudam o FID-like em -9% a +7% (nenhuma detectada
+  pela regra); ruído no latente *melhora* o FID-like (amostras subdispersas). Post hoc: contaminar
+  2% das amostras com amostras de 2 passos DDIM é detectado em todos os datasets; 5% dá +7% a +19%.
+- **E7, 5.000 amostras:** equivalências da campanha mantidas (intervalos até 2,1% por runs, 3,2%
+  por datasets; Fréchet latente até 4,9%; P/R diferem <0,5 pp). Largura dos intervalos quase igual
+  à de 512 amostras: domina a variação entre seeds. Estudante 1 passo vs teacher: MNIST +13,1%,
+  Fashion -2,4%, KMNIST +2,1%, Pneumonia -18,5%. Pisos: Fashion/KMNIST limitados pelo AE.
+- **E8, baselines:** DPM-Solver++(2M) com 6 avaliações iguala ou bate o teacher de 32 passos. Estudante
+  de 1 passo vs melhor solver com <=4 avaliações: muito melhor no Fashion (-33%) e Pneumonia (-66%),
+  igual no KMNIST, inconclusivo no MNIST (+4,6% [-12; +24]). Regressão do endpoint empata no
+  MNIST/KMNIST, pior no Fashion (+9%) e Pneumonia (+24%).
+- **E9, correladores <Z_iZ_j>:** entrelaçamento 1/8 células (MNIST h=0 q=4), circuito 0/8,
+  correladores 0/8 na métrica primária; agregado hybrid/surrogate -0,8% [-8,3; +7,3].
+- **E10, E1 com 6 seeds:** circuito 1/12 (MNIST h=32), entrelaçamento 0/12; o passe antigo (MNIST h=16)
+  não se mantém. Agregado hybrid/surrogate +1,0% [-1,4; +3,4]; hybrid/classical_branch em h>=16
+  -5,1% [-8,9; -1,1], vantagem compartilhada pelo surrogate separável.
