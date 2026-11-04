@@ -211,12 +211,9 @@ Critério de robustez: a conclusão de equivalência do artigo se mantém se o I
 dentro da margem com 5.000 amostras; se não, a conclusão é enfraquecida no texto.
 
 **E8: baselines de poucos passos (TODO 4).** Teacher hybrid, seeds 0-2, 4 datasets:
-DPM-Solver++(2M) com 3/4/6/8 avaliações e Heun (2ª ordem, espaço DDIM) com 4/6/8 avaliações,
-nos mesmos níveis inteiros da agenda usados pelo DDIM. Nota de implementação (teste de fumaça
-com modelos de 1 época, antes de qualquer resultado): Heun no primeiro intervalo explode porque
-sigma/alpha ~ 1e3 no nível terminal (alpha_bar_T = 1e-6); o primeiro passo é Euler (= DDIM) e a
-correção de 2ª ordem vale a partir do segundo. Com 1 ou 2 avaliações o DPM-Solver++(2M) coincide
-com o DDIM (primeiro e último passos de 1ª ordem), por isso começa em 3. Regressão direta do endpoint (Luhman &
+DPM-Solver++(2M) com 1/2/4/8 avaliações e Heun (2ª ordem, espaço DDIM) com 3/5/7 avaliações,
+nos mesmos níveis inteiros da agenda usados pelo DDIM. [Texto original do commit 538048d,
+restaurado; ver a emenda E8-a abaixo.] Regressão direta do endpoint (Luhman &
 Luhman, 2021): rede classical do mesmo tamanho do estudante, treinada por 200 épocas para mapear
 10.000 ruídos fixos no endpoint do teacher em 32 passos DDIM, avaliada em 1 passo. Descritivo,
 com uma pergunta: o estudante consistency de 1 passo é melhor que o melhor solver com até 4
@@ -255,3 +252,52 @@ E0) e o ruído no latente *melhora* o FID-like (as amostras são subdispersas; o
 Para mostrar sensibilidade a uma mudança de ~10% acrescentamos dois controles de efeito conhecido, marcados
 como post hoc: (d) readout zerado (remove o ramo inteiro, como no E0) e (e) contaminação de uma fração
 p em {2, 5, 10, 20}% das amostras por amostras do mesmo teacher em 2 passos DDIM (amostrador degenerado).
+
+*Emenda E8-a (escrita em 2026-11-04 15:56 no commit 43bdeaa, antes de qualquer resultado do E8;
+naquele commit o parágrafo do E8 acima foi reescrito no lugar, sem marcação; o texto original foi
+restaurado acima em 2026-11-04 e a mudança é registrada aqui).* Teste de fumaça com modelos de 1 época:
+Heun no primeiro intervalo explode porque sigma/alpha ~ 1e3 no nível terminal (alpha_bar_T = 1e-6);
+o primeiro passo passa a ser Euler (= DDIM) e a correção de 2ª ordem vale a partir do segundo, o que
+dá 2k-2 avaliações para k passos. Com 1 ou 2 avaliações o DPM-Solver++(2M) coincide com o DDIM
+(primeiro e último passos de 1ª ordem). A grade executada é, por isso, DPM-Solver++(2M) com 3/4/6/8
+avaliações e Heun com 4/6/8 (em vez de 1/2/4/8 e 3/5/7).
+
+## Pré-registro da rodada de revisão 1 — 2026-11-04 (noite)
+
+Escrito depois da revisão simulada `paper/reviews/review-2026-11-04-round1.md` e antes de rodar
+qualquer análise abaixo. Só inferência sobre checkpoints existentes, exceto R5.
+
+**R1: reavaliação das varreduras (resposta aos itens maiores 3 e 6).** E9 (seeds 0-2, todas as 16
+pipelines por dataset/seed) e E10 (seeds 3-5, todas as 24 pipelines; MNIST e Fashion-MNIST) com o
+protocolo do E7: 5.000 amostras (ruído inicial comum por dataset/seed), FID-like, precision/recall
+(k=3), Fréchet e MMD latentes; estudante em 1 passo (primária) e teacher em 32 passos. Para cada
+célula e para os agregados (células como unidade), as comparações hybrid/surrogate e
+hybrid/classical_branch em cada métrica. Critério de robustez: a conclusão do texto (entrelaçamento
+não contribui; o circuito não contribui além do surrogate separável) se mantém se os agregados
+hybrid/surrogate continuarem equivalentes (IC 90% dentro de ±10%) em FID-like e Fréchet latente.
+
+**R2: controle positivo no nível do ramo (item maior 1).** Nos checkpoints do E10 (seeds 3-5) com
+h em {0, 4, 16}, MNIST e Fashion-MNIST, pipeline hybrid: as perturbações pré-registradas do E6
+(escala a em {0; 0,5; 1,5; 2; 3} da parte que depende da entrada; permutação; readout zerado),
+estudante em 1 passo e teacher em 32, 5.000 amostras, mesma regra de detecção do E6 (IC 90% exclui 0
+e mudança >= 10%).
+
+**R3: controle positivo no nível do modelo (item maior 1).** Pares de pipelines treinadas de forma
+independente com diferença conhecida de capacidade, avaliados com a mesma máquina de razões
+pareadas: MLP puro h=16 contra h=32 e h=8 contra h=16 (E10 seeds 3-5 com 5.000 amostras, e E1+E10
+seis seeds com 512); hybrid h=32 contra h=128. Pergunta: o IC 90% exclui 0 para diferenças de
+~10-20% entre modelos treinados independentemente? Descritivo.
+
+**R4: pisos (item maior 4).** Regra única: o piso relevante é o de imagens reais da distribuição de
+treino que nenhum modelo viu (treino 10.000-15.000; PneumoniaMNIST: validação), porque os geradores
+são treinados no split de treino; o piso pré-registrado (teste contra teste) é reportado ao lado.
+Reconstruções do AE das imagens do piso relevante e das próprias imagens de referência. P/R do
+PneumoniaMNIST com 624 amostras geradas (média de 10 subamostras) para igualar os tamanhos.
+
+**R5: regressão do endpoint com mais dados (item menor 10).** Mesma rede e orçamento de épocas,
+100.000 pares ruído-endpoint em vez de 10.000, perda de validação em 2.000 pares separados.
+Descritivo; substitui a frase "pior" do texto se a diferença sumir.
+
+**R6: análises sem novos dados.** Intervalos agregados com bootstrap sobre seeds (células de uma seed
+compartilham o AE), regra do E10 também com média geométrica das razões pareadas,
+surrogate/classical_branch em h>=16, todos os intervalos que excluem 0 nos dois sentidos.
