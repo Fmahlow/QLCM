@@ -93,7 +93,10 @@ class Scorer:
     def __call__(self, images, latents=None):
         f, p = features(self.c, images, self.device)
         counts = torch.bincount(p.argmax(1), minlength=p.shape[1]).double(); q = counts / counts.sum(); q = q[q > 0]
-        precision, recall = precision_recall(self.rf, f)
+        if len(f) > len(self.rf):  # R4: equal set sizes for P/R (PneumoniaMNIST: 624 real), mean of 10 subsamples
+            g = torch.Generator(device='cpu').manual_seed(0); pr = [precision_recall(self.rf, f[torch.randperm(len(f), generator=g)[:len(self.rf)].to(f.device)]) for _ in range(10)]
+            precision, recall = float(np.mean([x[0] for x in pr])), float(np.mean([x[1] for x in pr]))
+        else: precision, recall = precision_recall(self.rf, f)
         row = {'n': len(images), 'fid_like': frechet_distance(self.rf_np, f.cpu().double().numpy()), 'precision': precision, 'recall': recall,
                'label_entropy': float(-(q * q.log()).sum()), 'mean_confidence': float(p.max(1).values.mean()),
                'label_histogram': counts.long().tolist(), 'pixel_variance': float(images.var(0).mean())}
@@ -197,6 +200,10 @@ def evaluate_seed(args, dataset, seed, device, classifier, ref_images, floor_ima
     if unseen_images is not None:
         with torch.no_grad(): unseen_lat = enc(unseen_images)
         rows.append(dict(model='real unseen train (floor, post hoc)', sampler='-', steps=0, **score(unseen_images, unseen_lat)))
+        with torch.no_grad(): rec_u = torch.cat([auto.decode(auto.encode(x.to(device))) for x in unseen_images.split(1000)])
+        rows.append(dict(model='AE reconstruction of unseen train (R4)', sampler='-', steps=0, **score(rec_u.cpu(), None)))
+    with torch.no_grad(): rec_r = torch.cat([auto.decode(auto.encode(x.to(device))) for x in ref_images.split(1000)])
+    rows.append(dict(model='AE reconstruction of reference (R4)', sampler='-', steps=0, **score(rec_r.cpu(), None)))
     torch.manual_seed(seed); noise = torch.randn(args.n, c['latent'], device=device)
 
     def run(label, model, sampler, steps, fn, extra=None):
@@ -229,9 +236,10 @@ def evaluate_seed(args, dataset, seed, device, classifier, ref_images, floor_ima
             run('teacher-hybrid', teacher, 'dpm_solver_pp_2m', nfe, lambda: dpm_solver_pp_2m(teacher, schedule, noise, nfe), {'teacher_kind': tk, 'nfe': nfe})
         for st in (3, 4, 5):
             run('teacher-hybrid', teacher, 'heun', st, lambda: heun(teacher, schedule, noise, st), {'teacher_kind': tk, 'nfe': 2 * st - 2})
-        if (d / 'student_endpoint.pt').exists():
-            e = load_student(d, 'classical', 'student_endpoint.pt')
-            run('student-endpoint_regression', e, 'direct', 1, lambda: sample_latents(e, schedule, noise, 1), {'teacher_kind': tk})
+        for fname, label in (('student_endpoint.pt', 'student-endpoint_regression'), ('student_endpoint_100k.pt', 'student-endpoint_regression_100k')):
+            if (d / fname).exists():
+                e = load_student(d, 'classical', fname)
+                run(label, e, 'direct', 1, lambda: sample_latents(e, schedule, noise, 1), {'teacher_kind': tk})
         # E6: positive control
         z_train, _, _ = latents(cfg, d, DataLoader(data(cfg), batch_size=cfg['batch']), device)
         torch.manual_seed(seed + 7); sub = z_train[torch.randperm(len(z_train), device=device)[:2048]]
