@@ -440,6 +440,249 @@ for lat in (16, 32, 64):
     rows.append(f"{lat} & {fmt(rec) if rec else '---'} & {fmt(G[(lat, 'teacher', 32)])} & {fmt(G[(lat, 'teacher', 4)])} & {fmt(G[(lat, 'classical', 1)])} & {fmt(G[(lat, 'classical', 4)])}" + r' \\')
 (GEN / 'tab_e4b.tex').write_text('\n'.join(rows) + '\n')
 
+# ================================================================ review experiments (2026-11-04 preregistration)
+RV = 'review-2026-11/'
+def pct_(x): return 100 * (math.exp(x) - 1)
+def sig(e): return e['lo_pct'] > 0 or e['hi_pct'] < 0          # 90% interval excludes 0
+def detect(e): return sig(e) and abs(e['mean_pct']) >= 10       # preregistered E6 detection rule
+def pm(e): return f"{e['mean_pct']:+.1f}"
+
+# ---- retrained campaign vs original (appendix) and E5 replication
+def camp_dict(rows_):
+    D_ = defaultdict(dict)
+    for r in rows_: D_[(r['dataset'], r['teacher_kind'], r['model'], r['steps'])][r['seed']] = fid(r)
+    return D_
+CR = camp_dict(load(RV + 'campaign-retrained.json')['rows'])
+REPL = camp_dict(load(RV + 'e5-mnist-replication.json')['rows'])
+rows = []; S['reproduction'] = {}
+for d in DATASETS:
+    for lab, key in (('teacher (32)', ('hybrid', 'teacher', 32)), ('hybrid student (1)', ('hybrid', 'hybrid', 1)),
+                     ('classical student (1)', ('hybrid', 'classical', 1)), ('classical teacher (32)', ('classical', 'teacher', 32))):
+        o, n = C[(d,) + key], CR[(d,) + key]; e = ratio_ci(n, o)
+        S['reproduction'][f'{d}/{lab}'] = e
+        rows.append(f"{DNAME[d] if lab.startswith('teacher') else ''} & {lab} & {fmt(list(o.values()))} & {fmt(list(n.values()))} & {pm(e)}\\%" + r' \\')
+    rows.append(r'\addlinespace')
+(GEN / 'tab_repro.tex').write_text('\n'.join(rows[:-1]) + '\n')
+S['reproduction_max_abs_pct'] = max(abs(e['mean_pct']) for e in S['reproduction'].values())
+
+m_ = lambda C_, tk, k, st: C_[('mnist', tk, k, st)]
+E5 = {}
+E5['student1_vs_teacher32'] = ratio_ci(m_(REPL, 'hybrid', 'hybrid', 1), m_(REPL, 'hybrid', 'teacher', 32))
+E5['student4_vs_teacher32'] = ratio_ci(m_(REPL, 'hybrid', 'hybrid', 4), m_(REPL, 'hybrid', 'teacher', 32))
+E5['within10_1'] = int(sum(m_(REPL, 'hybrid', 'hybrid', 1)[s] <= 1.1 * m_(REPL, 'hybrid', 'teacher', 32)[s] for s in m_(REPL, 'hybrid', 'teacher', 32)))
+E5['within10_4'] = int(sum(m_(REPL, 'hybrid', 'hybrid', 4)[s] <= 1.1 * m_(REPL, 'hybrid', 'teacher', 32)[s] for s in m_(REPL, 'hybrid', 'teacher', 32)))
+COMP5 = {'Teacher (32): hybrid vs.\\ classical': (('hybrid', 'teacher', 32), ('classical', 'teacher', 32)),
+         'Teacher (32): hybrid vs.\\ no entanglement': (('hybrid', 'teacher', 32), ('no_entanglement', 'teacher', 32)),
+         'Student (1): hybrid vs.\\ classical': (('hybrid', 'hybrid', 1), ('hybrid', 'classical', 1)),
+         'Student (1): hybrid vs.\\ surrogate': (('hybrid', 'hybrid', 1), ('hybrid', 'surrogate', 1)),
+         'Student (1) vs.\\ teacher (32)': (('hybrid', 'hybrid', 1), ('hybrid', 'teacher', 32)),
+         'Student (4) vs.\\ teacher (32)': (('hybrid', 'hybrid', 4), ('hybrid', 'teacher', 32))}
+rows = []
+for lab, (a, b) in COMP5.items():
+    e = ratio_ci(m_(REPL, *a), m_(REPL, *b))
+    both = {**{s: m_(REPL, *a)[s] for s in m_(REPL, *a)}, **{s: m_(CR, *a)[s] for s in m_(CR, *a)}}
+    bothc = {**{s: m_(REPL, *b)[s] for s in m_(REPL, *b)}, **{s: m_(CR, *b)[s] for s in m_(CR, *b)}}
+    e8 = ratio_ci(both, bothc); E5[lab] = e; E5[lab + '/8seeds'] = e8
+    rows.append(f"{lab} & {pm(e)}\\% & {ci_txt(e)} & {'yes' if e['equivalent'] else 'no'} & {pm(e8)}\\% & {ci_txt(e8)} & {'yes' if e8['equivalent'] else 'no'}" + r' \\')
+(GEN / 'tab_e5.tex').write_text('\n'.join(rows) + '\n')
+E5['means'] = {k: ms(list(m_(REPL, *k_).values())) for k, k_ in (('teacher32', ('hybrid', 'teacher', 32)), ('hybrid1', ('hybrid', 'hybrid', 1)),
+               ('classical1', ('hybrid', 'classical', 1)), ('hybrid4', ('hybrid', 'hybrid', 4)))}
+S['e5'] = E5
+
+# ---- review evaluation: 5,000 samples, floors, P/R, latent metrics, positive control, solvers
+RE = load(RV + 'e6-e7-e8-review-eval.json')['results']
+V = defaultdict(dict)
+for res in RE:
+    for x in res['rows']:
+        V[(x['model'], x['sampler'], x['steps'], x.get('teacher_kind'), x.get('perturbation'), x.get('value'))][(res['dataset'], res['seed'])] = x
+def rv(key, d, metric='fid_like'): return {s: V[key][(d, s)][metric] for s in range(3) if (d, s) in V[key] and metric in V[key][(d, s)]}
+def rvall(key, metric='fid_like'):
+    out = {}
+    for i, d in enumerate(DATASETS):
+        for s, v in rv(key, d, metric).items(): out[(i, s)] = v
+    return out
+T32k = ('teacher-hybrid', 'ddim', 32, 'hybrid', None, None); S1k = ('student-hybrid', 'consistency', 1, 'hybrid', None, None)
+S4k = ('student-hybrid', 'consistency', 4, 'hybrid', None, None)
+key_ = lambda m, smp, st, tk: (m, smp, st, tk, None, None)
+FLOORS = [('real (floor)', 'Real test (prereg.)'), ('real unseen train (floor, post hoc)', 'Real unseen train'), ('AE reconstruction (floor)', 'AE reconstruction')]
+rows = []; S['floors'] = {}
+for d in DATASETS:
+    first = True
+    for lab, k in [(l, (m, '-', 0, None, None, None)) for m, l in FLOORS] + [('Teacher (32)', T32k), ('Hybrid student (1)', S1k), ('Teacher DDIM (4)', key_('teacher-hybrid', 'ddim', 4, 'hybrid'))]:
+        f_ = rv(k, d)
+        if not f_: continue
+        cells = [ms(list(f_.values()))[0]] + [np.mean(list(rv(k, d, mm).values())) for mm in ('precision', 'recall')]
+        lf = rv(k, d, 'latent_frechet')
+        S['floors'][f'{d}/{lab}'] = cells
+        rows.append(f"{DNAME[d] if first else ''} & {lab} & {cells[0]:.1f} & {cells[1]:.2f} & {cells[2]:.2f} & {np.mean(list(lf.values())):.2f}" if lf else
+                    f"{DNAME[d] if first else ''} & {lab} & {cells[0]:.1f} & {cells[1]:.2f} & {cells[2]:.2f} & ---")
+        rows[-1] += r' \\'; first = False
+    rows.append(r'\addlinespace')
+(GEN / 'tab_floors.tex').write_text('\n'.join(rows[:-1]) + '\n')
+
+COMP7 = {'teacher32_hybrid_vs_classical': ('Teacher (32)', 'hybrid vs.\\ classical teacher', T32k, key_('teacher-classical', 'ddim', 32, 'classical')),
+         'teacher32_hybrid_vs_noent': ('Teacher (32)', 'hybrid vs.\\ no-entanglement teacher', T32k, key_('teacher-no_entanglement', 'ddim', 32, 'no_entanglement')),
+         'student1_hybrid_vs_classical': ('Student (1)', 'hybrid vs.\\ classical student', S1k, key_('student-classical', 'consistency', 1, 'hybrid')),
+         'student1_hybrid_vs_surrogate': ('Student (1)', 'hybrid vs.\\ separable surrogate', S1k, key_('student-surrogate', 'consistency', 1, 'hybrid')),
+         'student1_classical_teacher': ('Student (1)', 'classical student: hybrid vs.\\ classical teacher', key_('student-classical', 'consistency', 1, 'hybrid'), key_('student-classical', 'consistency', 1, 'classical')),
+         'student1_vs_teacher32': ('Student (1)', 'hybrid student vs.\\ its teacher (32)', S1k, T32k),
+         'student4_vs_teacher32': ('Student (4)', 'hybrid student vs.\\ its teacher (32)', S4k, T32k)}
+rows = []; S['e7_equivalence'] = {}
+for k, (role, lab, a, b) in COMP7.items():
+    ef = ratio_ci(rvall(a), rvall(b)); el = ratio_ci(rvall(a, 'latent_frechet'), rvall(b, 'latent_frechet'))
+    ed = cluster_ci([(rv(a, d), rv(b, d)) for d in DATASETS])
+    dp = 100 * np.mean([rvall(a, 'precision')[x] - rvall(b, 'precision')[x] for x in rvall(a)])
+    dr = 100 * np.mean([rvall(a, 'recall')[x] - rvall(b, 'recall')[x] for x in rvall(a)])
+    S['e7_equivalence'][k] = {'fid': ef, 'fid_by_dataset': ed, 'latent_frechet': el, 'precision_pp': dp, 'recall_pp': dr}
+    rows.append(f"{role} & {lab} & {pm(ef)}\\% & {ci_txt(ef)} & {ci_txt(ed)} & {pm(el)}\\% & {ci_txt(el)} & {dp:+.1f} & {dr:+.1f}" + r' \\')
+(GEN / 'tab_e7.tex').write_text('\n'.join(rows) + '\n')
+for d in DATASETS:
+    S['e7_equivalence'][f'student1_vs_teacher32/{d}'] = ratio_ci(rv(S1k, d), rv(T32k, d))
+
+# Positive control (E6). Ratios against the unperturbed model of the same seed; 3 seeds per dataset.
+PERT = [('Branch: input-dependent part removed ($a=0$)', 'perturb_scale', 'scale', 0.0), ('Branch: input-dependent part $\\times2$', 'perturb_scale', 'scale', 2.0),
+        ('Branch: input-dependent part $\\times3$', 'perturb_scale', 'scale', 3.0), ('Branch: permuted across samples', 'perturb_shuffle', 'shuffle', None),
+        ('Latent noise, $s=0.1$', 'perturb_latent_noise', 'latent_noise', 0.1), ('Latent noise, $s=0.4$', 'perturb_latent_noise', 'latent_noise', 0.4),
+        ('Branch removed (readout zeroed)$^\\dagger$', 'perturb_readout_zeroed', 'readout_zeroed', None),
+        ('Contamination 2\\%$^\\dagger$', 'perturb_contamination', 'contamination', 0.02), ('Contamination 5\\%$^\\dagger$', 'perturb_contamination', 'contamination', 0.05),
+        ('Contamination 10\\%$^\\dagger$', 'perturb_contamination', 'contamination', 0.1)]
+rows = []; S['e6'] = {}
+for lab, smp, pert, val in PERT:
+    cells = []
+    for base, st in ((T32k, 32), (S1k, 1)):
+        for d in DATASETS:
+            k = (base[0], smp, st, 'hybrid', pert, val); e = ratio_ci(rv(k, d), rv(base, d))
+            S['e6'][f'{base[0]}/{pert}/{val}/{d}'] = e
+            cells.append(f"{e['mean_pct']:+.0f}{'$^\\ast$' if detect(e) else ('$^\\circ$' if sig(e) else '')}")
+    rows.append(f"{lab} & " + ' & '.join(cells) + r' \\')
+(GEN / 'tab_e6.tex').write_text('\n'.join(rows) + '\n')
+S['e6_contamination5_range'] = [min(S['e6'][f'{b}/contamination/0.05/{d}']['mean_pct'] for b in ('teacher-hybrid', 'student-hybrid') for d in DATASETS),
+                                max(S['e6'][f'{b}/contamination/0.05/{d}']['mean_pct'] for b in ('teacher-hybrid', 'student-hybrid') for d in DATASETS)]
+S['e6_contamination2_all_sig'] = all(sig(S['e6'][f'{b}/contamination/0.02/{d}']) for b in ('teacher-hybrid', 'student-hybrid') for d in DATASETS)
+S['e6_branch_any_detect'] = any(detect(S['e6'][f'{b}/{p}/{v}/{d}']) for b in ('teacher-hybrid', 'student-hybrid') for d in DATASETS for _, _, p, v in PERT[:4])
+S['e6_branch_range'] = [min(S['e6'][f'{b}/{p}/{v}/{d}']['mean_pct'] for b in ('teacher-hybrid', 'student-hybrid') for d in DATASETS for _, _, p, v in PERT[:4]),
+                        max(S['e6'][f'{b}/{p}/{v}/{d}']['mean_pct'] for b in ('teacher-hybrid', 'student-hybrid') for d in DATASETS for _, _, p, v in PERT[:4])]
+
+# Few-step baselines (E8)
+SOLV = [('DDIM', [(n, key_('teacher-hybrid', 'ddim', n, 'hybrid')) for n in (2, 4, 8, 32)]),
+        ('DPM-Solver++(2M)', [(n, key_('teacher-hybrid', 'dpm_solver_pp_2m', n, 'hybrid')) for n in (3, 4, 6, 8)]),
+        ('Heun', [(2 * st - 2, key_('teacher-hybrid', 'heun', st, 'hybrid')) for st in (3, 4, 5)]),
+        ('Endpoint regression', [(1, key_('student-endpoint_regression', 'direct', 1, 'hybrid'))]),
+        ('Consistency, classical student', [(1, key_('student-classical', 'consistency', 1, 'hybrid')), (4, key_('student-classical', 'consistency', 4, 'hybrid'))]),
+        ('Consistency, hybrid student', [(1, S1k), (4, S4k)])]
+rows = []
+for name, items in SOLV:
+    for n, k in items:
+        rows.append(f"{name} & {n} & " + ' & '.join(f"{np.mean(list(rv(k, d).values())):.1f}" for d in DATASETS) + r' \\')
+    rows.append(r'\addlinespace')
+(GEN / 'tab_e8.tex').write_text('\n'.join(rows[:-1]) + '\n')
+rows = []; S['e8'] = {}
+for d in DATASETS:
+    cands = {f'DPM-Solver++ {n}': k for n, k in SOLV[1][1] if n <= 4}; cands.update({f'Heun {n}': k for n, k in SOLV[2][1] if n <= 4}); cands['DDIM 4'] = SOLV[0][1][1][1]
+    bname = min(cands, key=lambda c: np.mean(list(rv(cands[c], d).values())))
+    e1 = ratio_ci(rv(S1k, d), rv(cands[bname], d)); e2 = ratio_ci(rv(SOLV[3][1][0][1], d), rv(S1k, d))
+    e3 = ratio_ci(rv(S1k, d), rv(key_('teacher-hybrid', 'dpm_solver_pp_2m', 8, 'hybrid'), d))
+    S['e8'][d] = {'best_le4': bname, 'student1_vs_best_le4': e1, 'endpoint_vs_student1': e2, 'student1_vs_dpm8': e3}
+    rows.append(f"{DNAME[d]} & {bname} & {pm(e1)}\\% & {ci_txt(e1)} & {pm(e3)}\\% & {ci_txt(e3)} & {pm(e2)}\\% & {ci_txt(e2)}" + r' \\')
+(GEN / 'tab_e8_ratios.tex').write_text('\n'.join(rows) + '\n')
+
+fig, axes = plt.subplots(1, 4, figsize=(7.0, 1.9))
+SC = {'DDIM': ('teacher', 'x', '-'), 'DPM-Solver++(2M)': ('#7a5195', 'v', '-'), 'Heun': ('#8a8984', 'P', '-')}
+for ax, d in zip(axes, DATASETS):
+    for name, items in SOLV[:3]:
+        col, mk, ls = SC[name]; col = COL.get(col, col)
+        xs = [n for n, _ in items if n <= 8]; ys = [np.mean(list(rv(k, d).values())) for n, k in items if n <= 8]
+        ax.plot(xs, ys, color=col, marker=mk, ms=3.5, lw=1.2, label=f'teacher, {name}')
+    for name, kind, items in (('consistency student (hybrid)', 'hybrid', SOLV[5][1]), ('endpoint regression', 'classical', SOLV[3][1])):
+        xs = [n for n, _ in items]; ys = [np.mean(list(rv(k, d).values())) for _, k in items]
+        ax.plot(xs, ys, color=COL[kind], marker=MARK[kind], ms=4, lw=0 if len(xs) == 1 else 1.2, label=name)
+    ax.axhline(np.mean(list(rv(T32k, d).values())), color='#52514e', lw=.7, ls=':')
+    ax.set_xscale('log', base=2); ax.set_yscale('log'); ax.set_xticks([1, 2, 4, 8]); ax.set_xticklabels([1, 2, 4, 8])
+    ax.set_title(DNAME[d]); ax.set_xlabel('network evaluations'); clean_log(ax)
+axes[0].set_ylabel('FID-like (5,000 samples)')
+h_, l_ = axes[0].get_legend_handles_labels(); fig.legend(h_, l_, loc='lower center', ncol=5, bbox_to_anchor=(.5, -.2), fontsize=6.5)
+save(fig, 'fig_solvers.pdf')
+
+# ---- E9: correlator readout
+def sweep2(path):
+    D_, P_ = defaultdict(dict), {}
+    for r in load(path)['rows']:
+        role = 'teacher' if r['model'] == 'teacher' else 'student'
+        k = (r['dataset'], r['kind'], r['hidden'], r['qubits'], r['depth'], r.get('readout', 'zz' if r['pipeline'].endswith('-zz') else 'z'), role, r['steps'])
+        D_[k][r['seed']] = fid(r); P_[k] = r['parameters']
+    return D_, P_
+E9, P9 = sweep2(RV + 'e9-correlators.json')
+E9CELLS = [(0, 4, 2), (4, 4, 2), (16, 4, 2), (0, 6, 4)]
+rows = []; S['e9'] = {'cells': [], 'passes': defaultdict(int)}
+for d in ('mnist', 'fashion_mnist'):
+    for h, q, dp in E9CELLS:
+        g = lambda kind, ro, role='student', st=1: E9[(d, kind, h, q, dp, ro, role, st)]
+        out = {}
+        for role, st in (('student', 1), ('teacher', 32)):
+            out[(role, 'ent')] = verdict(g('hybrid', 'zz', role, st), g('surrogate', 'zz', role, st))
+            out[(role, 'circ')] = verdict(g('hybrid', 'zz', role, st), g('classical_branch', 'zz', role, st))
+            out[(role, 'zz')] = verdict(g('hybrid', 'zz', role, st), g('hybrid', 'z', role, st))
+            for c in ('ent', 'circ', 'zz'): S['e9']['passes'][f'{role}/{c}'] += int(out[(role, c)][0])
+        S['e9']['cells'].append({'dataset': d, 'h': h, 'q': q, 'depth': dp, **{f'{a}/{b}': {'pass': v[0], 'gain': v[1]} for (a, b), v in out.items()}})
+        mk = lambda v: f"{1 - v[1]:.2f}{'$^\\ast$' if v[0] else ''}"
+        rows.append(f"{DNAME[d] if (h, q) == (0, 4) else ''} & {h} & {q}/{dp} & {fmt(list(g('hybrid', 'zz').values()))} & {fmt(list(g('surrogate', 'zz').values()))} & "
+                    f"{fmt(list(g('classical_branch', 'zz').values()))} & {fmt(list(g('hybrid', 'z').values()))} & {mk(out[('student', 'ent')])} & {mk(out[('student', 'circ')])} & {mk(out[('student', 'zz')])} & "
+                    f"{mk(out[('teacher', 'ent')])} & {mk(out[('teacher', 'circ')])} & {mk(out[('teacher', 'zz')])}" + r' \\')
+    rows.append(r'\addlinespace')
+(GEN / 'tab_e9.tex').write_text('\n'.join(rows[:-1]) + '\n')
+S['e9']['passes'] = dict(S['e9']['passes'])
+cells9 = [(d, h, q, dp) for d in ('mnist', 'fashion_mnist') for h, q, dp in E9CELLS]
+S['e9']['pooled'] = {
+    'hybrid_zz/surrogate_zz': cluster_ci([(E9[(d, 'hybrid', h, q, dp, 'zz', 'student', 1)], E9[(d, 'surrogate', h, q, dp, 'zz', 'student', 1)]) for d, h, q, dp in cells9]),
+    'hybrid_zz/classical_branch_zz': cluster_ci([(E9[(d, 'hybrid', h, q, dp, 'zz', 'student', 1)], E9[(d, 'classical_branch', h, q, dp, 'zz', 'student', 1)]) for d, h, q, dp in cells9]),
+    'hybrid_zz/hybrid_z': cluster_ci([(E9[(d, 'hybrid', h, q, dp, 'zz', 'student', 1)], E9[(d, 'hybrid', h, q, dp, 'z', 'student', 1)]) for d, h, q, dp in cells9]),
+    'surrogate_zz/surrogate_z': cluster_ci([(E9[(d, 'surrogate', h, q, dp, 'zz', 'student', 1)], E9[(d, 'surrogate', h, q, dp, 'z', 'student', 1)]) for d, h, q, dp in cells9]),
+    'hybrid_z/surrogate_z': cluster_ci([(E9[(d, 'hybrid', h, q, dp, 'z', 'student', 1)], E9[(d, 'surrogate', h, q, dp, 'z', 'student', 1)]) for d, h, q, dp in cells9])}
+S['e9']['pooled_teacher'] = {
+    'hybrid_zz/surrogate_zz': cluster_ci([(E9[(d, 'hybrid', h, q, dp, 'zz', 'teacher', 32)], E9[(d, 'surrogate', h, q, dp, 'zz', 'teacher', 32)]) for d, h, q, dp in cells9]),
+    'hybrid_zz/hybrid_z': cluster_ci([(E9[(d, 'hybrid', h, q, dp, 'zz', 'teacher', 32)], E9[(d, 'hybrid', h, q, dp, 'z', 'teacher', 32)]) for d, h, q, dp in cells9])}
+rows = []
+for lab, e in [('Student (1): hybrid / surrogate, \\texttt{zz}', S['e9']['pooled']['hybrid_zz/surrogate_zz']),
+               ('Student (1): hybrid / classical branch, \\texttt{zz}', S['e9']['pooled']['hybrid_zz/classical_branch_zz']),
+               ('Student (1): hybrid \\texttt{zz} / hybrid \\texttt{z}', S['e9']['pooled']['hybrid_zz/hybrid_z']),
+               ('Student (1): surrogate \\texttt{zz} / surrogate \\texttt{z}', S['e9']['pooled']['surrogate_zz/surrogate_z']),
+               ('Teacher (32): hybrid / surrogate, \\texttt{zz}', S['e9']['pooled_teacher']['hybrid_zz/surrogate_zz']),
+               ('Teacher (32): hybrid \\texttt{zz} / hybrid \\texttt{z}', S['e9']['pooled_teacher']['hybrid_zz/hybrid_z'])]:
+    rows.append(f"{lab} & {pm(e)}\\% & {ci_txt(e)} & {'yes' if e['equivalent'] else 'no'}" + r' \\')
+(GEN / 'tab_e9_pooled.tex').write_text('\n'.join(rows) + '\n')
+
+# ---- E10: E1 grid with six seeds (0-2 original E1 runs, 3-5 new)
+E10, P10 = sweep(RV + 'e10-capacity-seeds.json')
+def six(d, kind, h):
+    k = (d, kind, h, 4, 2, False, 'student', 1); a = dict(E1.get(k, ALL.get(k, {}))); a.update(E10.get(k, {})); return a
+def verdict6(t, c, need=5):
+    seeds = sorted(set(t) & set(c)); gain = 1 - np.mean([t[s] for s in seeds]) / np.mean([c[s] for s in seeds])
+    wins = sum(t[s] < c[s] for s in seeds)
+    return bool(wins >= need and gain >= .10), gain, wins
+rows = []; S['e10'] = {'circuit': 0, 'entanglement': 0, 'cells': [], 'circuit_against': 0}
+for d in ('mnist', 'fashion_mnist'):
+    for h in (0, 4, 8, 16, 32, 128):
+        hy, su, cb = six(d, 'hybrid', h), six(d, 'surrogate', h), six(d, 'classical_branch', h)
+        vc = verdict6(hy, cb); ve = verdict6(hy, su); rc_ = verdict6(cb, hy)
+        ec = ratio_ci(hy, cb); ee = ratio_ci(hy, su)
+        S['e10']['circuit'] += vc[0]; S['e10']['entanglement'] += ve[0]; S['e10']['circuit_against'] += rc_[0]
+        S['e10']['cells'].append({'dataset': d, 'h': h, 'n': len(hy), 'circuit': vc, 'entanglement': ve, 'ci_circuit': ec, 'ci_entanglement': ee})
+        rows.append(f"{DNAME[d] if h == 0 else ''} & {h} & {fmt(list(hy.values()))} & {fmt(list(su.values()))} & {fmt(list(cb.values()))} & "
+                    f"{pm(ec)}\\% {ci_txt(ec)}{'$^\\ast$' if vc[0] else ''} & {vc[2]}/6 & {pm(ee)}\\% {ci_txt(ee)}{'$^\\ast$' if ve[0] else ''} & {ve[2]}/6" + r' \\')
+    rows.append(r'\addlinespace')
+(GEN / 'tab_e10.tex').write_text('\n'.join(rows[:-1]) + '\n')
+e10cells = [(d, h) for d in ('mnist', 'fashion_mnist') for h in (0, 4, 8, 16, 32, 128)]
+S['e10']['pooled'] = {'hybrid/surrogate': cluster_ci([(six(d, 'hybrid', h), six(d, 'surrogate', h)) for d, h in e10cells]),
+                      'hybrid/classical_branch h>=16': cluster_ci([(six(d, 'hybrid', h), six(d, 'classical_branch', h)) for d, h in e10cells if h >= 16]),
+                      'hybrid/classical_branch h<=8': cluster_ci([(six(d, 'hybrid', h), six(d, 'classical_branch', h)) for d, h in e10cells if h <= 8])}
+S['e10']['equivalent_cells'] = sum(c['ci_circuit']['equivalent'] for c in S['e10']['cells']) + sum(c['ci_entanglement']['equivalent'] for c in S['e10']['cells'])
+# Replication of the new seeds alone (3-5) for the original E1 criteria
+S['e10']['new_seeds_only'] = {'circuit': 0, 'entanglement': 0}
+for d, h in e10cells:
+    g = lambda kind: E10[(d, kind, h, 4, 2, False, 'student', 1)]
+    S['e10']['new_seeds_only']['circuit'] += verdict(g('hybrid'), g('classical_branch'))[0]
+    S['e10']['new_seeds_only']['entanglement'] += verdict(g('hybrid'), g('surrogate'))[0]
+
 # ---------------------------------------------------------------- classifier validation
 cv = {d: json.load(open(p)) for d, p in (('mnist', REP / 'pilot-mnist/mnist_classifier.validation.json'),
       ('fashion_mnist', REP / 'campaign-datasets-teachers/fashion_mnist_classifier.validation.json'),
