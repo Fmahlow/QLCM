@@ -3,7 +3,7 @@
 set -u
 cd "$(dirname "$0")/.."
 P=.venv-v2/bin/python
-while pgrep -f run_phase1.sh >/dev/null; do sleep 60; done
+while pgrep -f "^/bin/bash results/run_phase1.sh" >/dev/null; do sleep 60; done
 echo "START endpoint $(date -Is)"
 $P v2/diagnostics/endpoint_regression.py --campaign results/v2-campaign-datasets-teachers --workers 6
 echo "EXIT endpoint $? $(date -Is)"
