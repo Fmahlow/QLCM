@@ -1,0 +1,1 @@
+Completed teacher at /home/mahlow/QLCM/results/v2-e9-correlators/fashion_mnist/seed-0/hybrid-h16-q4-d2

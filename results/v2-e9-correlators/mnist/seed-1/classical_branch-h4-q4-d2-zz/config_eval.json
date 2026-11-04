@@ -1,0 +1,28 @@
+{
+  "dataset": "mnist",
+  "max_samples": 10000,
+  "latent": 16,
+  "hidden": 4,
+  "qubits": 4,
+  "depth": 2,
+  "timesteps": 32,
+  "batch": 64,
+  "ae_epochs": 20,
+  "teacher_epochs": 150,
+  "student_epochs": 200,
+  "ema_decay": 0.95,
+  "seed": 1,
+  "device": "cuda",
+  "samples": 512,
+  "evaluation_steps": [
+    1,
+    2,
+    4,
+    8,
+    16,
+    32
+  ],
+  "reupload": false,
+  "teacher_kind": "classical_branch",
+  "readout": "zz"
+}

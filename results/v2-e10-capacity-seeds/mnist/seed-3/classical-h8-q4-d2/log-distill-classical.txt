@@ -1,0 +1,1 @@
+Completed distill at /home/mahlow/QLCM/results/v2-e10-capacity-seeds/mnist/seed-3/classical-h8-q4-d2
