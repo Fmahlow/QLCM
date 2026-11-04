@@ -163,3 +163,77 @@ estudante f(z_t,t) contra o endpoint da trajetória DDIM completa do teacher a p
 de z_t, por t, em MNIST e PneumoniaMNIST. (b) KMNIST: FID-like de reconstrução do AE
 para latente 16; AEs de latente 32 e 64, com teacher hybrid hidden=128 e estudante
 classical. Ambos descritivos.
+
+## Pré-registro da revisão "controles e robustez" — 2026-11-04
+
+Escrito antes de rodar qualquer experimento abaixo, em resposta à revisão simulada de
+2026-11-03 (`paper/TODO.md`). Servidor novo, mesma GPU (RTX 3080 Ti), mesmo torch
+(2.14.0+cu126). Os checkpoints da campanha de 2026-10-13 não foram recuperados: a campanha
+(4 datasets x seeds 0/1/2, mesmo script e orçamento: 200 épocas / EMA 0,95) é retreinada
+do zero em `results/v2-campaign-datasets-teachers`, sem `--pilot/--diag` (o MNIST deixa de
+reaproveitar piloto e diagnóstico, mas a config efetiva é a mesma). Diferenças numéricas
+em relação à campanha original são esperadas (não determinismo da GPU e circuito fundido);
+serão reportadas lado a lado. Os relatórios E0-E4 continuam valendo para os checkpoints
+originais e não são refeitos.
+
+**E5: replicação MNIST fora da amostra (TODO 1).** Seeds novas 3,4,5,6,7, mesmo script da
+campanha (`results/v2-mnist-replication`), orçamento fixado antes (200 épocas / EMA 0,95),
+sem nenhum ajuste. Critérios, nas 5 seeds novas:
+- *destilação*: estudante hybrid de 1 passo com FID-like até 10% pior que o teacher hybrid
+  em 32 passos, por seed (contagem x/5) e na razão geométrica média (IC 90%);
+- *equivalência*: TOST pareado com margem de ±10% (IC 90% da razão dentro de [-9,1%, +10%])
+  para hybrid vs classical (estudante 1 passo; teacher 32 passos). Com 5 seeds o poder é
+  baixo; também reportamos o agrupamento com as seeds 0-2 retreinadas (8 seeds).
+
+**E6: controle positivo (TODO 2).** Só inferência, nos checkpoints retreinados da campanha
+(4 datasets x 3 seeds), teacher hybrid (32 passos) e estudante hybrid (1 passo). Perturbações
+conhecidas do ramo: (a) escala da parte que depende da entrada, ramo = média + a (ramo - média),
+a em {0; 0,5; 1,5; 2; 3}, média sobre latentes ruidosos de treino (a=0 é o `features_mean` do E0);
+(b) permutação das saídas do ramo entre amostras do lote (mantém a marginal, destrói a
+dependência da entrada); (c) calibração independente do ramo: ruído gaussiano de desvio s em
+{0,05; 0,1; 0,2; 0,4} somado ao latente normalizado gerado antes do decoder. Métrica: FID-like
+com 5.000 amostras (E7). Critério de *detecção* por dataset e perturbação: IC 90% da razão
+pareada (3 seeds) exclui 0 e a média é de ao menos 10%. Reportar a menor perturbação detectada
+e, para (c), a curva FID-like x s, que dá a sensibilidade da métrica a uma degradação conhecida.
+
+**E7: pisos e robustez da métrica (TODO 3).** Para os 4 datasets e seeds 0-2 retreinadas:
+- 5.000 amostras geradas (mesmo ruído inicial para todos os modelos de uma seed); referência
+  real = 5.000 primeiras imagens de teste (PneumoniaMNIST: as 624 de teste);
+- piso real-vs-real: 5.000 outras imagens de teste (PneumoniaMNIST: as 524 de validação) contra
+  a referência; piso do AE: reconstrução das mesmas imagens do piso real;
+- precision/recall (Kynkäänniemi et al., 2019), k=3, nas features do classificador;
+- métricas no latente: Fréchet e MMD (kernel RBF, banda pela mediana) entre latentes gerados
+  normalizados e latentes de teste codificados pelo mesmo AE (sem decoder nem classificador);
+- modelos: teachers hybrid/classical/no_entanglement em 32 passos e DDIM em 1/2/4/8; estudantes
+  hybrid/classical/surrogate do teacher hybrid e classical dos teachers de controle, em 1 e 4 passos.
+Refazer os testes de equivalência do artigo (margem ±10%) com 5.000 amostras e em cada métrica.
+Critério de robustez: a conclusão de equivalência do artigo se mantém se o IC 90% continuar
+dentro da margem com 5.000 amostras; se não, a conclusão é enfraquecida no texto.
+
+**E8: baselines de poucos passos (TODO 4).** Teacher hybrid, seeds 0-2, 4 datasets:
+DPM-Solver++(2M) com 1/2/4/8 avaliações e Heun (2ª ordem, espaço DDIM) com 3/5/7 avaliações,
+nos mesmos níveis inteiros da agenda usados pelo DDIM. Regressão direta do endpoint (Luhman &
+Luhman, 2021): rede classical do mesmo tamanho do estudante, treinada por 200 épocas para mapear
+10.000 ruídos fixos no endpoint do teacher em 32 passos DDIM, avaliada em 1 passo. Descritivo,
+com uma pergunta: o estudante consistency de 1 passo é melhor que o melhor solver com até 4
+avaliações? Resposta por dataset com a razão pareada (IC 90%).
+
+**E9: readout com correladores (TODO 5).** Novo readout `zz`: o circuito devolve <Z_i> e
+<Z_i Z_j> (i<j), q + q(q-1)/2 features. Controles com a mesma saída: surrogate separável
+(<Z_i Z_j> = <Z_i><Z_j>, exato sem entrelaçamento) e classical_branch Linear(2q, mesma
+dimensão)+Tanh. Grade: MNIST e Fashion-MNIST, seeds 0-2 retreinadas, (q=4, prof. 2) com
+hidden em {0, 4, 16} e (q=6, prof. 4, hidden 0); readout `zz` e, como par casado no mesmo
+run, readout `z` nas mesmas células. Pipeline casado como no E1. Critérios do E1 por célula:
+*entrelaçamento contribui* (hybrid melhor que surrogate nas 3 seeds e média >=10% menor) e
+*circuito contribui* (idem contra classical_branch); e *correladores ajudam*: hybrid zz melhor
+que hybrid z nas 3 seeds e >=10%. Primária: estudante em 1 passo; secundária: teacher 32.
+
+**E10: mais seeds no E1 (TODO 7).** Grade E1 completa para MNIST e Fashion-MNIST com seeds
+novas 3,4,5 (AEs novos do Fashion-MNIST; MNIST usa os AEs do E5). As tabelas do E1 passam a
+ter 6 seeds (0-2 dos checkpoints originais, 3-5 novas). Critério do E1 adaptado: hybrid melhor
+em ao menos 5 de 6 seeds e média >=10% menor; também o IC 90% pareado por célula. As seeds 0-2
+continuam sendo as do pré-registro original; nenhuma conclusão do E1 original é reescrita sem
+mostrar as duas versões.
+
+**Grade de amostras (TODO 6).** Figura qualitativa com amostras do teacher (32), estudante
+hybrid (1) e estudante classical (1), seed 0, nos 4 datasets.
