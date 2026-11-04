@@ -211,8 +211,12 @@ Critério de robustez: a conclusão de equivalência do artigo se mantém se o I
 dentro da margem com 5.000 amostras; se não, a conclusão é enfraquecida no texto.
 
 **E8: baselines de poucos passos (TODO 4).** Teacher hybrid, seeds 0-2, 4 datasets:
-DPM-Solver++(2M) com 1/2/4/8 avaliações e Heun (2ª ordem, espaço DDIM) com 3/5/7 avaliações,
-nos mesmos níveis inteiros da agenda usados pelo DDIM. Regressão direta do endpoint (Luhman &
+DPM-Solver++(2M) com 3/4/6/8 avaliações e Heun (2ª ordem, espaço DDIM) com 4/6/8 avaliações,
+nos mesmos níveis inteiros da agenda usados pelo DDIM. Nota de implementação (teste de fumaça
+com modelos de 1 época, antes de qualquer resultado): Heun no primeiro intervalo explode porque
+sigma/alpha ~ 1e3 no nível terminal (alpha_bar_T = 1e-6); o primeiro passo é Euler (= DDIM) e a
+correção de 2ª ordem vale a partir do segundo. Com 1 ou 2 avaliações o DPM-Solver++(2M) coincide
+com o DDIM (primeiro e último passos de 1ª ordem), por isso começa em 3. Regressão direta do endpoint (Luhman &
 Luhman, 2021): rede classical do mesmo tamanho do estudante, treinada por 200 épocas para mapear
 10.000 ruídos fixos no endpoint do teacher em 32 passos DDIM, avaliada em 1 passo. Descritivo,
 com uma pergunta: o estudante consistency de 1 passo é melhor que o melhor solver com até 4

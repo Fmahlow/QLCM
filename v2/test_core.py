@@ -57,4 +57,16 @@ class CoreTests(unittest.TestCase):
             m=Network(4,0,3,2,kind); self.assertIsNone(m.backbone); m(z,t,s).sum().backward()
             self.assertTrue(all(p.grad is not None for p in m.parameters()))
         with self.assertRaises(ValueError): Network(4,0,3,2,'classical')
+    def test_correlator_readout(self):
+        x=torch.randn(9,8)
+        for reupload in (False,True):
+            q=QuantumFeatures(4,3,False,reupload,'zz'); surrogate=SeparableSurrogate(4,3,reupload,'zz'); surrogate.load_state_dict({'weights':q.weights.detach()})
+            self.assertEqual(q(x).shape,(9,10)); torch.testing.assert_close(q(x),surrogate(x),atol=2e-6,rtol=2e-5)
+            plain=QuantumFeatures(4,3,False,reupload); plain.weights.data.copy_(q.weights.data); torch.testing.assert_close(q(x)[:,:4],plain(x))
+        q=QuantumFeatures(4,3,True,False,'zz'); z=q(x); i,j=torch.triu_indices(4,4,1)
+        self.assertGreater(float((z[:,4:]-z[:,i]*z[:,j]).abs().max()),1e-3)  # entanglement breaks factorization
+        s=Schedule(8); zl=torch.randn(5,4); t=torch.randint(1,9,(5,))
+        for kind in ('hybrid','surrogate','classical_branch'):
+            m=Network(4,0,4,2,kind,readout='zz'); self.assertEqual(m.readout.in_features,10); m(zl,t,s).sum().backward()
+            self.assertTrue(all(p.grad is not None for p in m.parameters()))
 if __name__=='__main__': unittest.main()

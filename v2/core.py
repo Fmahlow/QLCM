@@ -39,15 +39,20 @@ class QuantumFeatures(nn.Module):
     keeps the gate-by-gate simulation for tests. With reupload, the encoding
     gates are repeated before every trainable layer.
     """
-    def __init__(self, qubits=4, depth=2, entangle=True, reupload=False):
+    def __init__(self, qubits=4, depth=2, entangle=True, reupload=False, readout='z'):
         super().__init__()
         if qubits < 2 or depth < 1:
             raise ValueError('qubits>=2 and depth>=1 required')
-        self.qubits,self.depth,self.entangle,self.reupload = qubits,depth,entangle,reupload
+        if readout not in ('z','zz'): raise ValueError(readout)
+        self.qubits,self.depth,self.entangle,self.reupload,self.readout = qubits,depth,entangle,reupload,readout
         self.weights = nn.Parameter(torch.randn(depth,qubits,2)*0.1)
         basis = torch.arange(2**qubits)
         bits = ((basis[:,None] >> torch.arange(qubits-1,-1,-1))&1)
-        self.register_buffer('signs', (1-2*bits).float())
+        signs=(1-2*bits).float()
+        if readout=='zz':  # <Z_i> then <Z_i Z_j>, i<j
+            i,j=torch.triu_indices(qubits,qubits,1)
+            signs=torch.cat([signs,signs[:,i]*signs[:,j]],1)
+        self.register_buffer('signs', signs)
         pairs=sorted({tuple(sorted((w,(w+1)%qubits))) for w in range(qubits)})
         self.register_buffer('cz', torch.stack([1-2*bits[:,a]*bits[:,b] for a,b in pairs]).prod(0).float())
     def gate(self, state, theta, wire, rz=False):
@@ -113,11 +118,15 @@ class QuantumFeatures(nn.Module):
             state=self.gate(state,torch.full_like(x[:,0],math.pi/4),w)
         return state.abs().square()@self.signs
 
+def feature_count(qubits, readout='z'):
+    return qubits if readout=='z' else qubits+qubits*(qubits-1)//2
+
 class SeparableSurrogate(nn.Module):
-    """Exact algebraic substitute for QuantumFeatures(entangle=False), all depths, with or without reupload."""
-    def __init__(self, qubits=4, depth=2, reupload=False):
+    """Exact algebraic substitute for QuantumFeatures(entangle=False), all depths, with or without reupload.
+    For readout 'zz' the correlators of a product state factorize: <Z_i Z_j> = <Z_i><Z_j>."""
+    def __init__(self, qubits=4, depth=2, reupload=False, readout='z'):
         super().__init__()
-        self.qubits,self.reupload=qubits,reupload
+        self.qubits,self.reupload,self.readout=qubits,reupload,readout
         self.weights=nn.Parameter(torch.randn(depth,qubits,2)*.1)
     @staticmethod
     def rotate(b,ry,rz):
@@ -131,17 +140,20 @@ class SeparableSurrogate(nn.Module):
         for layer,weights in enumerate(self.weights):
             if layer and self.reupload: b=self.rotate(b,x[:,:q],x[:,q:])
             b=self.rotate(b,weights[:,0],weights[:,1])
-        return (b[2]-b[0])/math.sqrt(2)
+        z=(b[2]-b[0])/math.sqrt(2)
+        if self.readout=='zz':
+            i,j=torch.triu_indices(q,q,1,device=z.device); z=torch.cat([z,z[:,i]*z[:,j]],1)
+        return z
 
 class ClassicalBranch(nn.Module):
     """Classical control for the circuit block: same input/output shapes and range, cross-feature interactions."""
-    def __init__(self, qubits=4):
-        super().__init__(); self.layer=nn.Sequential(nn.Linear(2*qubits,qubits),nn.Tanh())
+    def __init__(self, qubits=4, readout='z'):
+        super().__init__(); self.layer=nn.Sequential(nn.Linear(2*qubits,feature_count(qubits,readout)),nn.Tanh())
     def forward(self,x): return self.layer(x)
 
 class Network(nn.Module):
     """hidden=0 removes the MLP backbone, leaving only compressor -> branch -> readout."""
-    def __init__(self, latent=16, hidden=64, qubits=4, depth=2, kind='hybrid', reupload=False):
+    def __init__(self, latent=16, hidden=64, qubits=4, depth=2, kind='hybrid', reupload=False, readout='z'):
         super().__init__()
         self.kind=kind
         if kind not in ('classical','hybrid','no_entanglement','surrogate','classical_branch'): raise ValueError(kind)
@@ -149,9 +161,9 @@ class Network(nn.Module):
         self.backbone=nn.Sequential(nn.Linear(latent+3,hidden),nn.SiLU(),nn.Linear(hidden,hidden),nn.SiLU(),nn.Linear(hidden,latent)) if hidden else None
         if kind != 'classical':
             self.compressor=nn.Sequential(nn.Linear(latent+3,2*qubits),nn.Tanh())
-            self.quantum=(SeparableSurrogate(qubits,depth,reupload) if kind=='surrogate' else ClassicalBranch(qubits) if kind=='classical_branch'
-                          else QuantumFeatures(qubits,depth,kind=='hybrid',reupload))
-            self.readout=nn.Linear(qubits,latent)
+            self.quantum=(SeparableSurrogate(qubits,depth,reupload,readout) if kind=='surrogate' else ClassicalBranch(qubits,readout) if kind=='classical_branch'
+                          else QuantumFeatures(qubits,depth,kind=='hybrid',reupload,readout))
+            self.readout=nn.Linear(feature_count(qubits,readout),latent)
     def branch(self,features):
         return self.readout(self.quantum(math.pi*self.compressor(features)))
     def forward(self,z,t,schedule):

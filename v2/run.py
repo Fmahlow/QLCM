@@ -18,7 +18,7 @@ def finite(loss):
     if not torch.isfinite(loss): raise RuntimeError('nonfinite loss; stop before checkpoint')
 def load(path,device): return torch.load(path,map_location=device,weights_only=True)
 def write(path,value): path.write_text(json.dumps(value,indent=2)+'\n')
-def net(c,kind): return Network(c['latent'],c['hidden'],c['qubits'],c['depth'],kind,c.get('reupload',False))
+def net(c,kind): return Network(c['latent'],c['hidden'],c['qubits'],c['depth'],kind,c.get('reupload',False),c.get('readout','z'))
 def teacher_kind(c): return c.get('teacher_kind','hybrid')  # pilot configs/checkpoints predate this key
 def data(c):
     if c['dataset']=='bars_stripes': return BarsAndStripes(c['max_samples'],seed=c['seed'])
@@ -29,6 +29,7 @@ def ae(c):
 def config_signature(c):
     signature={k:c[k] for k in ('dataset','max_samples','latent','hidden','qubits','depth','timesteps','seed')}
     if c.get('reupload'): signature['reupload']=True  # key absent in older checkpoints
+    if c.get('readout','z')!='z': signature['readout']=c['readout']  # idem
     return signature
 def train_ae(c,out,loader,device):
     model=ae(c).to(device); opt=torch.optim.AdamW(model.parameters(),lr=1e-3)
