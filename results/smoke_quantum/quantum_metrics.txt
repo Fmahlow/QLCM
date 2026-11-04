@@ -1,0 +1,5 @@
+model=quantum
+parameters=26456
+final_loss=0.95946401
+epochs=1
+timesteps=5

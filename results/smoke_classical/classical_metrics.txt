@@ -1,0 +1,5 @@
+model=classical
+parameters=37184
+final_loss=0.99564189
+epochs=1
+timesteps=10

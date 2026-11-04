@@ -12,7 +12,6 @@ env/
 
 # Data and generated experiment artifacts
 data/
-results/
 *.pt
 *.pth
 *.ckpt
