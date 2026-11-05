@@ -504,19 +504,20 @@ def rvall(key, metric='fid_like'):
 T32k = ('teacher-hybrid', 'ddim', 32, 'hybrid', None, None); S1k = ('student-hybrid', 'consistency', 1, 'hybrid', None, None)
 S4k = ('student-hybrid', 'consistency', 4, 'hybrid', None, None)
 key_ = lambda m, smp, st, tk: (m, smp, st, tk, None, None)
-FLOORS = [('real (floor)', 'Real test (prereg.)'), ('real unseen train (floor, post hoc)', 'Real unseen train'), ('AE reconstruction (floor)', 'AE reconstruction')]
+FLOORS = [('real unseen train (floor, post hoc)', 'Real, held-out train'), ('AE reconstruction of unseen train (R4)', 'AE recon., held-out train'),
+          ('real (floor)', 'Real, test (prereg.)'), ('AE reconstruction (floor)', 'AE recon., test (prereg.)'), ('AE reconstruction of reference (R4)', 'AE recon., reference')]
 rows = []; S['floors'] = {}
 for d in DATASETS:
     first = True
     for lab, k in [(l, (m, '-', 0, None, None, None)) for m, l in FLOORS] + [('Teacher (32)', T32k), ('Hybrid student (1)', S1k), ('Teacher DDIM (4)', key_('teacher-hybrid', 'ddim', 4, 'hybrid'))]:
         f_ = rv(k, d)
         if not f_: continue
+        if d == 'pneumoniamnist': lab = {'Real, test (prereg.)': 'Real, validation (prereg.)', 'AE recon., test (prereg.)': 'AE recon., validation (prereg.)'}.get(lab, lab)
         cells = [ms(list(f_.values()))[0]] + [np.mean(list(rv(k, d, mm).values())) for mm in ('precision', 'recall')]
-        lf = rv(k, d, 'latent_frechet')
-        S['floors'][f'{d}/{lab}'] = cells
-        rows.append(f"{DNAME[d] if first else ''} & {lab} & {cells[0]:.1f} & {cells[1]:.2f} & {cells[2]:.2f} & {np.mean(list(lf.values())):.2f}" if lf else
-                    f"{DNAME[d] if first else ''} & {lab} & {cells[0]:.1f} & {cells[1]:.2f} & {cells[2]:.2f} & ---")
-        rows[-1] += r' \\'; first = False
+        lf = rv(k, d, 'latent_frechet'); lm = rv(k, d, 'latent_mmd')
+        S['floors'][f'{d}/{lab}'] = cells + ([np.mean(list(lf.values())), np.mean(list(lm.values()))] if lf else [])
+        tail = f" & {np.mean(list(lf.values())):.2f} & {1000 * np.mean(list(lm.values())):.1f}" if lf else ' & --- & ---'
+        rows.append(f"{DNAME[d] if first else ''} & {lab} & {cells[0]:.1f} & {cells[1]:.2f} & {cells[2]:.2f}" + tail + r' \\'); first = False
     rows.append(r'\addlinespace')
 (GEN / 'tab_floors.tex').write_text('\n'.join(rows[:-1]) + '\n')
 
@@ -533,8 +534,10 @@ for k, (role, lab, a, b) in COMP7.items():
     ed = cluster_ci([(rv(a, d), rv(b, d)) for d in DATASETS])
     dp = 100 * np.mean([rvall(a, 'precision')[x] - rvall(b, 'precision')[x] for x in rvall(a)])
     dr = 100 * np.mean([rvall(a, 'recall')[x] - rvall(b, 'recall')[x] for x in rvall(a)])
-    S['e7_equivalence'][k] = {'fid': ef, 'fid_by_dataset': ed, 'latent_frechet': el, 'precision_pp': dp, 'recall_pp': dr}
-    rows.append(f"{role} & {lab} & {pm(ef)}\\% & {ci_txt(ef)} & {ci_txt(ed)} & {pm(el)}\\% & {ci_txt(el)} & {dp:+.1f} & {dr:+.1f}" + r' \\')
+    dm = 1000 * np.array([rvall(a, 'latent_mmd')[x] - rvall(b, 'latent_mmd')[x] for x in rvall(a)])
+    tcm = stats.t.ppf(.95, len(dm) - 1) * dm.std(ddof=1) / math.sqrt(len(dm))
+    S['e7_equivalence'][k] = {'fid': ef, 'fid_by_dataset': ed, 'latent_frechet': el, 'precision_pp': dp, 'recall_pp': dr, 'mmd_x1000': [float(dm.mean()), float(dm.mean() - tcm), float(dm.mean() + tcm)]}
+    rows.append(f"{role} & {lab} & {pm(ef)}\\% & {ci_txt(ef)} & {ci_txt(ed)} & {pm(el)}\\% & {ci_txt(el)} & {dm.mean():+.2f} [{dm.mean() - tcm:+.2f}, {dm.mean() + tcm:+.2f}] & {dp:+.1f} & {dr:+.1f}" + r' \\')
 (GEN / 'tab_e7.tex').write_text('\n'.join(rows) + '\n')
 for d in DATASETS:
     S['e7_equivalence'][f'student1_vs_teacher32/{d}'] = ratio_ci(rv(S1k, d), rv(T32k, d))
@@ -556,6 +559,18 @@ for lab, smp, pert, val in PERT:
             cells.append(f"{e['mean_pct']:+.0f}{'$^\\ast$' if detect(e) else ('$^\\circ$' if sig(e) else '')}")
     rows.append(f"{lab} & " + ' & '.join(cells) + r' \\')
 (GEN / 'tab_e6.tex').write_text('\n'.join(rows) + '\n')
+rows = []
+for lab, smp, pert, vals in (('Scale $a$', 'perturb_scale', 'scale', (0.0, 0.5, 1.5, 2.0, 3.0)), ('Permuted', 'perturb_shuffle', 'shuffle', (None,)),
+                              ('Readout zeroed$^\\dagger$', 'perturb_readout_zeroed', 'readout_zeroed', (None,)), ('Latent noise $s$', 'perturb_latent_noise', 'latent_noise', (0.05, 0.1, 0.2, 0.4)),
+                              ('Contamination$^\\dagger$', 'perturb_contamination', 'contamination', (0.02, 0.05, 0.1, 0.2))):
+    for v in vals:
+        cells = []
+        for base, st in ((T32k, 32), (S1k, 1)):
+            for d in DATASETS:
+                e = ratio_ci(rv((base[0], smp, st, 'hybrid', pert, v), d), rv(base, d))
+                cells.append(f"{e['mean_pct']:+.0f}{'$^\\ast$' if detect(e) else ('$^\\circ$' if sig(e) else '')}")
+        rows.append(f"{lab}{'' if v is None else ' = ' + format(v, 'g')} & " + ' & '.join(cells) + r' \\')
+(GEN / 'tab_e6_full.tex').write_text('\n'.join(rows) + '\n')
 S['e6_contamination5_range'] = [min(S['e6'][f'{b}/contamination/0.05/{d}']['mean_pct'] for b in ('teacher-hybrid', 'student-hybrid') for d in DATASETS),
                                 max(S['e6'][f'{b}/contamination/0.05/{d}']['mean_pct'] for b in ('teacher-hybrid', 'student-hybrid') for d in DATASETS)]
 S['e6_contamination2_all_sig'] = all(sig(S['e6'][f'{b}/contamination/0.02/{d}']) for b in ('teacher-hybrid', 'student-hybrid') for d in DATASETS)
@@ -567,9 +582,11 @@ S['e6_branch_range'] = [min(S['e6'][f'{b}/{p}/{v}/{d}']['mean_pct'] for b in ('t
 SOLV = [('DDIM', [(n, key_('teacher-hybrid', 'ddim', n, 'hybrid')) for n in (2, 4, 8, 32)]),
         ('DPM-Solver++(2M)', [(n, key_('teacher-hybrid', 'dpm_solver_pp_2m', n, 'hybrid')) for n in (3, 4, 6, 8)]),
         ('Heun', [(2 * st - 2, key_('teacher-hybrid', 'heun', st, 'hybrid')) for st in (3, 4, 5)]),
-        ('Endpoint regression', [(1, key_('student-endpoint_regression', 'direct', 1, 'hybrid'))]),
+        ('Endpoint regression (10k pairs)', [(1, key_('student-endpoint_regression', 'direct', 1, 'hybrid'))]),
+        ('Endpoint regression (100k pairs)', [(1, key_('student-endpoint_regression_100k', 'direct', 1, 'hybrid'))]),
         ('Consistency, classical student', [(1, key_('student-classical', 'consistency', 1, 'hybrid')), (4, key_('student-classical', 'consistency', 4, 'hybrid'))]),
         ('Consistency, hybrid student', [(1, S1k), (4, S4k)])]
+SOLVK = {name: items for name, items in SOLV}
 rows = []
 for name, items in SOLV:
     for n, k in items:
@@ -580,10 +597,11 @@ rows = []; S['e8'] = {}
 for d in DATASETS:
     cands = {f'DPM-Solver++ {n}': k for n, k in SOLV[1][1] if n <= 4}; cands.update({f'Heun {n}': k for n, k in SOLV[2][1] if n <= 4}); cands['DDIM 4'] = SOLV[0][1][1][1]
     bname = min(cands, key=lambda c: np.mean(list(rv(cands[c], d).values())))
-    e1 = ratio_ci(rv(S1k, d), rv(cands[bname], d)); e2 = ratio_ci(rv(SOLV[3][1][0][1], d), rv(S1k, d))
+    e1 = ratio_ci(rv(S1k, d), rv(cands[bname], d)); e2 = ratio_ci(rv(SOLVK['Endpoint regression (10k pairs)'][0][1], d), rv(S1k, d))
+    e2b = ratio_ci(rv(SOLVK['Endpoint regression (100k pairs)'][0][1], d), rv(S1k, d))
     e3 = ratio_ci(rv(S1k, d), rv(key_('teacher-hybrid', 'dpm_solver_pp_2m', 8, 'hybrid'), d))
-    S['e8'][d] = {'best_le4': bname, 'student1_vs_best_le4': e1, 'endpoint_vs_student1': e2, 'student1_vs_dpm8': e3}
-    rows.append(f"{DNAME[d]} & {bname} & {pm(e1)}\\% & {ci_txt(e1)} & {pm(e3)}\\% & {ci_txt(e3)} & {pm(e2)}\\% & {ci_txt(e2)}" + r' \\')
+    S['e8'][d] = {'best_le4': bname, 'student1_vs_best_le4': e1, 'endpoint_vs_student1': e2, 'endpoint100k_vs_student1': e2b, 'student1_vs_dpm8': e3}
+    rows.append(f"{DNAME[d]} & {bname} & {pm(e1)}\\% & {ci_txt(e1)} & {pm(e3)}\\% & {ci_txt(e3)} & {pm(e2)}\\% & {pm(e2b)}\\% {ci_txt(e2b)}" + r' \\')
 (GEN / 'tab_e8_ratios.tex').write_text('\n'.join(rows) + '\n')
 
 fig, axes = plt.subplots(1, 4, figsize=(7.0, 1.9))
@@ -593,7 +611,7 @@ for ax, d in zip(axes, DATASETS):
         col, mk, ls = SC[name]; col = COL.get(col, col)
         xs = [n for n, _ in items if n <= 8]; ys = [np.mean(list(rv(k, d).values())) for n, k in items if n <= 8]
         ax.plot(xs, ys, color=col, marker=mk, ms=3.5, lw=1.2, label=f'teacher, {name}')
-    for name, kind, items in (('consistency student (hybrid)', 'hybrid', SOLV[5][1]), ('endpoint regression', 'classical', SOLV[3][1])):
+    for name, kind, items in (('consistency student (hybrid)', 'hybrid', SOLVK['Consistency, hybrid student']), ('endpoint regression (100k)', 'classical', SOLVK['Endpoint regression (100k pairs)'])):
         xs = [n for n, _ in items]; ys = [np.mean(list(rv(k, d).values())) for _, k in items]
         ax.plot(xs, ys, color=COL[kind], marker=MARK[kind], ms=4, lw=0 if len(xs) == 1 else 1.2, label=name)
     ax.axhline(np.mean(list(rv(T32k, d).values())), color='#52514e', lw=.7, ls=':')
@@ -682,6 +700,117 @@ for d, h in e10cells:
     g = lambda kind: E10[(d, kind, h, 4, 2, False, 'student', 1)]
     S['e10']['new_seeds_only']['circuit'] += verdict(g('hybrid'), g('classical_branch'))[0]
     S['e10']['new_seeds_only']['entanglement'] += verdict(g('hybrid'), g('surrogate'))[0]
+
+# ================================================================ review round 1 (R1-R6 of the round-1 preregistration)
+def rescore(path):
+    D_ = defaultdict(dict)
+    for res in load(path)['results']:
+        for x in res['rows']:
+            D_[(res['dataset'], x['kind'], x['hidden'], x['qubits'], x['depth'], x['readout'], x['role'], x.get('perturbation'), x.get('value'))][res['seed']] = x
+    return D_
+R1 = {'E9': rescore(RV + 'r1-e9-rescore.json'), 'E10': rescore(RV + 'r1-e10-rescore-r2-perturb.json')}
+def r1get(sw, d, kind, h, q, dp, ro, role, metric, pert=None, val=None):
+    return {s: v[metric] for s, v in R1[sw][(d, kind, h, q, dp, ro, role, pert, val)].items()}
+R1CELLS = {'E9': [(d, h, q, dp, ro) for d in ('mnist', 'fashion_mnist') for h, q, dp in E9CELLS for ro in ('zz', 'z')],
+           'E10': [(d, h, 4, 2, 'z') for d in ('mnist', 'fashion_mnist') for h in (0, 4, 8, 16, 32, 128)]}
+S['r1'] = {}; rows = []
+FAMS = [('E9', 'hybrid/surrogate', 'surrogate', lambda c: True), ('E9', 'hybrid/classical branch', 'classical_branch', lambda c: True),
+        ('E10', 'hybrid/surrogate', 'surrogate', lambda c: True), ('E10', 'hybrid/classical branch, $h\\ge16$', 'classical_branch', lambda c: c[1] >= 16),
+        ('E10', 'hybrid/classical branch, $h\\le8$', 'classical_branch', lambda c: c[1] <= 8)]
+for sw, lab, ctrl, keep in FAMS:
+    cells = [c for c in R1CELLS[sw] if keep(c)]; out = []
+    for role in ('student', 'teacher'):
+        for metric in ('fid_like', 'latent_frechet'):
+            e = cluster_ci([(r1get(sw, c[0], 'hybrid', *c[1:], role, metric), r1get(sw, c[0], ctrl, *c[1:], role, metric)) for c in cells])
+            S['r1'][f'{sw}/{lab}/{role}/{metric}'] = e; out.append(e)
+    dprec = 100 * np.mean([np.mean(list(r1get(sw, c[0], 'hybrid', *c[1:], 'student', 'precision').values())) - np.mean(list(r1get(sw, c[0], ctrl, *c[1:], 'student', 'precision').values())) for c in cells])
+    drec = 100 * np.mean([np.mean(list(r1get(sw, c[0], 'hybrid', *c[1:], 'student', 'recall').values())) - np.mean(list(r1get(sw, c[0], ctrl, *c[1:], 'student', 'recall').values())) for c in cells])
+    rows.append(f"{sw} & {lab} ({len(cells)}) & " + ' & '.join(f"{pm(e)}\\% {ci_txt(e)}" for e in out) + f" & {dprec:+.1f} / {drec:+.1f}" + r' \\')
+(GEN / 'tab_r1.tex').write_text('\n'.join(rows) + '\n')
+# per-cell preregistered rules at 5,000 samples (3 seeds)
+S['r1_rules'] = {}
+for sw in ('E9', 'E10'):
+    for ctrl in ('surrogate', 'classical_branch'):
+        for role in ('student', 'teacher'):
+            S['r1_rules'][f'{sw}/{ctrl}/{role}'] = int(sum(verdict(r1get(sw, c[0], 'hybrid', *c[1:], role, 'fid_like'), r1get(sw, c[0], ctrl, *c[1:], role, 'fid_like'))[0] for c in R1CELLS[sw]))
+            S['r1_rules'][f'{sw}/{ctrl}/{role}/against'] = int(sum(verdict(r1get(sw, c[0], ctrl, *c[1:], role, 'fid_like'), r1get(sw, c[0], 'hybrid', *c[1:], role, 'fid_like'))[0] for c in R1CELLS[sw]))
+
+# R2: branch perturbations where the branch carries the model
+R2P = [('$a=0$', 'scale', 0.0), ('$a=0.5$', 'scale', 0.5), ('$a=2$', 'scale', 2.0), ('$a=3$', 'scale', 3.0), ('permuted', 'shuffle', None), ('readout zeroed', 'readout_zeroed', None)]
+rows = []; S['r2'] = {}
+for d in ('mnist', 'fashion_mnist'):
+    for h in (0, 4, 16):
+        for role, st in (('student', 1), ('teacher', 32)):
+            base = r1get('E10', d, 'hybrid', h, 4, 2, 'z', role, 'fid_like'); cells = []
+            for lab, pert, val in R2P:
+                e = ratio_ci(r1get('E10', d, 'hybrid', h, 4, 2, 'z', role, 'fid_like', pert, val), base); S['r2'][f'{d}/{h}/{role}/{pert}/{val}'] = e
+                cells.append(f"{e['mean_pct']:+.0f}{'$^\\ast$' if detect(e) else ('$^\\circ$' if sig(e) else '')}")
+            rows.append(f"{DNAME[d] if (h, role) == (0, 'student') else ''} & {h} & {role} ({st}) & " + ' & '.join(cells) + r' \\')
+    rows.append(r'\addlinespace')
+(GEN / 'tab_r2.tex').write_text('\n'.join(rows[:-1]) + '\n')
+S['r2_detected'] = sum(detect(e) for e in S['r2'].values()); S['r2_total'] = len(S['r2'])
+S['r2_a0_detected_student'] = sum(detect(S['r2'][f'{d}/{h}/student/scale/0.0']) for d in ('mnist', 'fashion_mnist') for h in (0, 4, 16))
+S['r2_a0_range_student'] = [min(S['r2'][f'{d}/{h}/student/scale/0.0']['mean_pct'] for d in ('mnist', 'fashion_mnist') for h in (0, 4, 16)),
+                            max(S['r2'][f'{d}/{h}/student/scale/0.0']['mean_pct'] for d in ('mnist', 'fashion_mnist') for h in (0, 4, 16))]
+
+# R3: model-level positive control, pairs of independently trained pipelines with a known capacity difference
+R3P = [('MLP only, $h=8$ vs.\\ $h=16$', 'classical', 8, 16), ('MLP only, $h=16$ vs.\\ $h=32$', 'classical', 16, 32), ('MLP only, $h=32$ vs.\\ $h=128$', 'classical', 32, 128),
+       ('Hybrid, $h=16$ vs.\\ $h=32$', 'hybrid', 16, 32), ('Hybrid, $h=32$ vs.\\ $h=128$', 'hybrid', 32, 128)]
+rows = []; S['r3'] = {}
+for lab, kind, ha, hb in R3P:
+    cells = []
+    for d in ('mnist', 'fashion_mnist'):
+        e5 = ratio_ci(r1get('E10', d, kind, ha, 4, 2, 'z', 'student', 'fid_like'), r1get('E10', d, kind, hb, 4, 2, 'z', 'student', 'fid_like'))
+        e6 = ratio_ci(six(d, kind, ha), six(d, kind, hb)); S['r3'][f'{d}/{kind}/{ha}/{hb}'] = {'n5000_3seeds': e5, 'n512_6seeds': e6}
+        cells += [f"{pm(e5)}\\% {ci_txt(e5)}", f"{pm(e6)}\\% {ci_txt(e6)}"]
+    rows.append(f"{lab} & " + ' & '.join(cells) + r' \\')
+(GEN / 'tab_r3.tex').write_text('\n'.join(rows) + '\n')
+
+# R6: bootstrap over seeds for pooled intervals (cells of one seed share the AE), geometric E10 rule, surrogate/classical branch
+rngb = np.random.default_rng(1)
+def boot_pool(cells, B=20000):
+    seeds = sorted(set.intersection(*[set(t) & set(c) for t, c in cells]))
+    lr = np.array([[math.log(t[s] / c[s]) for s in seeds] for t, c in cells])        # cells x seeds
+    idx = rngb.integers(0, len(seeds), size=(B, len(seeds)))
+    m = lr[:, idx].mean(axis=2).mean(axis=0)                                         # resample seeds, mean over cells
+    lo, hi = np.percentile(m, [5, 95]); pct = lambda x: 100 * (math.exp(x) - 1)
+    return {'mean_pct': pct(lr.mean()), 'lo_pct': pct(lo), 'hi_pct': pct(hi), 'equivalent': bool(lo > -MARGIN and hi < MARGIN), 'seeds': len(seeds)}
+S['r6_bootstrap'] = {'E10 hybrid/surrogate': boot_pool([(six(d, 'hybrid', h), six(d, 'surrogate', h)) for d, h in e10cells]),
+                     'E10 hybrid/classical_branch h>=16': boot_pool([(six(d, 'hybrid', h), six(d, 'classical_branch', h)) for d, h in e10cells if h >= 16]),
+                     'E10 surrogate/classical_branch h>=16': boot_pool([(six(d, 'surrogate', h), six(d, 'classical_branch', h)) for d, h in e10cells if h >= 16]),
+                     'E1 hybrid/surrogate (3 seeds)': boot_pool([(st1(d, 'hybrid', h), st1(d, 'surrogate', h)) for d, h in e1cells])}
+S['e10']['pooled']['surrogate/classical_branch h>=16'] = cluster_ci([(six(d, 'surrogate', h), six(d, 'classical_branch', h)) for d, h in e10cells if h >= 16])
+def verdict6g(t, c, need=5):
+    seeds = sorted(set(t) & set(c)); r = [math.log(t[s] / c[s]) for s in seeds]
+    return bool(sum(x < 0 for x in r) >= need and math.exp(np.mean(r)) <= 0.9)
+S['e10']['geometric_rule'] = {'circuit': int(sum(verdict6g(six(d, 'hybrid', h), six(d, 'classical_branch', h)) for d, h in e10cells)),
+                              'entanglement': int(sum(verdict6g(six(d, 'hybrid', h), six(d, 'surrogate', h)) for d, h in e10cells)),
+                              'circuit_against': int(sum(verdict6g(six(d, 'classical_branch', h), six(d, 'hybrid', h)) for d, h in e10cells))}
+S['e10']['significant_cells'] = [{'dataset': c['dataset'], 'h': c['h'], 'comparison': comp, 'mean_pct': c[k]['mean_pct'], 'lo': c[k]['lo_pct'], 'hi': c[k]['hi_pct']}
+                                 for c in S['e10']['cells'] for comp, k in (('circuit', 'ci_circuit'), ('entanglement', 'ci_entanglement')) if sig(c[k])]
+
+# Forest plot with six seeds for the E1 cells (E10) and three for E2 (overwrites the three-seed version)
+forest6 = []
+for d in ('mnist', 'fashion_mnist'):
+    for h in (0, 4, 8, 16, 32, 128):
+        lab = f"E1 {DNAME[d]} h={h} (6 seeds)"
+        forest6.append((lab, 'circuit', ratio_ci(six(d, 'hybrid', h), six(d, 'classical_branch', h))))
+        forest6.append((lab, 'entanglement', ratio_ci(six(d, 'hybrid', h), six(d, 'surrogate', h))))
+forest6 += [f for f in forest if f[0].startswith('E2')]
+fig, axes = plt.subplots(1, 2, figsize=(7.0, 5.4), sharey=True)
+labels6 = [f[0] for f in forest6 if f[1] == 'circuit']
+from matplotlib.ticker import FixedLocator, NullLocator
+for ax, comp, title in zip(axes, ('circuit', 'entanglement'), ('hybrid / classical branch', 'hybrid / separable surrogate')):
+    items = [f for f in forest6 if f[1] == comp]
+    for i, (lab, _, r) in enumerate(items):
+        y = len(items) - 1 - i; col = COL['hybrid'] if comp == 'circuit' else COL['surrogate']
+        ax.plot([max(1 + r['lo_pct'] / 100, .2), min(1 + r['hi_pct'] / 100, 5)], [y, y], color=col, lw=1.2); ax.plot(1 + r['mean_pct'] / 100, y, marker='o', color=col, ms=3.5)
+    ax.axvspan(1 / 1.1, 1.1, color='#e4e3df', alpha=.7, lw=0); ax.axvline(1, color='#52514e', lw=.8)
+    ax.set_xscale('log'); ax.set_xlim(.25, 4); ax.xaxis.set_major_locator(FixedLocator([.25, .5, 1, 2, 4])); ax.xaxis.set_minor_locator(NullLocator())
+    ax.set_xticklabels(['0.25', '0.5', '1', '2', '4']); ax.set_title(title); ax.set_xlabel('FID-like ratio (<1: circuit better)')
+    ax.set_yticks(range(len(items))); ax.set_yticklabels(labels6[::-1], fontsize=6.5); ax.grid(axis='y', visible=False)
+save(fig, 'fig_forest.pdf')
+S['forest6_equivalent'] = sum(f[2]['equivalent'] for f in forest6); S['forest6_n'] = len(forest6)
 
 # ---------------------------------------------------------------- classifier validation
 cv = {d: json.load(open(p)) for d, p in (('mnist', REP / 'pilot-mnist/mnist_classifier.validation.json'),

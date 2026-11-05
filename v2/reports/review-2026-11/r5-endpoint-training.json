@@ -1,0 +1,182 @@
+{
+ "mnist/0/student_endpoint": {
+  "final_loss": 0.011052465997636318,
+  "pairs": 10000,
+  "epochs": 200,
+  "ema_decay": 0.95,
+  "seconds": 25.53312228899449
+ },
+ "mnist/0/student_endpoint_100k": {
+  "final_loss": 0.008835017681121826,
+  "ema_val_loss": 0.008459329605102539,
+  "pairs": 100000,
+  "epochs": 200,
+  "ema_decay": 0.95,
+  "seconds": 334.04009700682946
+ },
+ "mnist/1/student_endpoint": {
+  "final_loss": 0.008953368291258812,
+  "pairs": 10000,
+  "epochs": 200,
+  "ema_decay": 0.95,
+  "seconds": 25.712152832886204
+ },
+ "mnist/1/student_endpoint_100k": {
+  "final_loss": 0.007126049604266882,
+  "ema_val_loss": 0.007972434163093567,
+  "pairs": 100000,
+  "epochs": 200,
+  "ema_decay": 0.95,
+  "seconds": 327.2748069490772
+ },
+ "mnist/2/student_endpoint": {
+  "final_loss": 0.012416338548064232,
+  "pairs": 10000,
+  "epochs": 200,
+  "ema_decay": 0.95,
+  "seconds": 35.21571400202811
+ },
+ "mnist/2/student_endpoint_100k": {
+  "final_loss": 0.00895828939974308,
+  "ema_val_loss": 0.008886431343853474,
+  "pairs": 100000,
+  "epochs": 200,
+  "ema_decay": 0.95,
+  "seconds": 358.49643380986527
+ },
+ "fashion_mnist/0/student_endpoint": {
+  "final_loss": 0.013599315658211708,
+  "pairs": 10000,
+  "epochs": 200,
+  "ema_decay": 0.95,
+  "seconds": 25.692454949952662
+ },
+ "fashion_mnist/0/student_endpoint_100k": {
+  "final_loss": 0.009722383692860603,
+  "ema_val_loss": 0.008119357749819756,
+  "pairs": 100000,
+  "epochs": 200,
+  "ema_decay": 0.95,
+  "seconds": 283.8806910100393
+ },
+ "fashion_mnist/1/student_endpoint": {
+  "final_loss": 0.00955337192863226,
+  "pairs": 10000,
+  "epochs": 200,
+  "ema_decay": 0.95,
+  "seconds": 34.939018751028925
+ },
+ "fashion_mnist/1/student_endpoint_100k": {
+  "final_loss": 0.0074859196320176125,
+  "ema_val_loss": 0.00768917566165328,
+  "pairs": 100000,
+  "epochs": 200,
+  "ema_decay": 0.95,
+  "seconds": 386.83775337110274
+ },
+ "fashion_mnist/2/student_endpoint": {
+  "final_loss": 0.011834828183054924,
+  "pairs": 10000,
+  "epochs": 200,
+  "ema_decay": 0.95,
+  "seconds": 33.47829523589462
+ },
+ "fashion_mnist/2/student_endpoint_100k": {
+  "final_loss": 0.00799950398504734,
+  "ema_val_loss": 0.007703807204961777,
+  "pairs": 100000,
+  "epochs": 200,
+  "ema_decay": 0.95,
+  "seconds": 329.69289463805035
+ },
+ "kmnist/0/student_endpoint": {
+  "final_loss": 0.010446187108755112,
+  "pairs": 10000,
+  "epochs": 200,
+  "ema_decay": 0.95,
+  "seconds": 25.583546235924587
+ },
+ "kmnist/0/student_endpoint_100k": {
+  "final_loss": 0.009044315665960312,
+  "ema_val_loss": 0.006374543998390436,
+  "pairs": 100000,
+  "epochs": 200,
+  "ema_decay": 0.95,
+  "seconds": 260.71516843000427
+ },
+ "kmnist/1/student_endpoint": {
+  "final_loss": 0.012030798941850662,
+  "pairs": 10000,
+  "epochs": 200,
+  "ema_decay": 0.95,
+  "seconds": 25.65181674901396
+ },
+ "kmnist/1/student_endpoint_100k": {
+  "final_loss": 0.006808926817029715,
+  "ema_val_loss": 0.007385518867522478,
+  "pairs": 100000,
+  "epochs": 200,
+  "ema_decay": 0.95,
+  "seconds": 310.40379379387014
+ },
+ "kmnist/2/student_endpoint": {
+  "final_loss": 0.008771553635597229,
+  "pairs": 10000,
+  "epochs": 200,
+  "ema_decay": 0.95,
+  "seconds": 25.667485434096307
+ },
+ "kmnist/2/student_endpoint_100k": {
+  "final_loss": 0.006314856931567192,
+  "ema_val_loss": 0.0066284434869885445,
+  "pairs": 100000,
+  "epochs": 200,
+  "ema_decay": 0.95,
+  "seconds": 318.6397884299513
+ },
+ "pneumoniamnist/0/student_endpoint": {
+  "final_loss": 0.0021898732520639896,
+  "pairs": 10000,
+  "epochs": 200,
+  "ema_decay": 0.95,
+  "seconds": 28.439363228855655
+ },
+ "pneumoniamnist/0/student_endpoint_100k": {
+  "final_loss": 0.0021631119307130575,
+  "ema_val_loss": 0.0014797559706494212,
+  "pairs": 100000,
+  "epochs": 200,
+  "ema_decay": 0.95,
+  "seconds": 319.6194743278902
+ },
+ "pneumoniamnist/1/student_endpoint": {
+  "final_loss": 0.0021176233422011137,
+  "pairs": 10000,
+  "epochs": 200,
+  "ema_decay": 0.95,
+  "seconds": 29.107629297999665
+ },
+ "pneumoniamnist/1/student_endpoint_100k": {
+  "final_loss": 0.001806803746148944,
+  "ema_val_loss": 0.0016761162551119924,
+  "pairs": 100000,
+  "epochs": 200,
+  "ema_decay": 0.95,
+  "seconds": 256.49616973591037
+ },
+ "pneumoniamnist/2/student_endpoint": {
+  "final_loss": 0.0018764794804155827,
+  "pairs": 10000,
+  "epochs": 200,
+  "ema_decay": 0.95,
+  "seconds": 29.178203771822155
+ },
+ "pneumoniamnist/2/student_endpoint_100k": {
+  "final_loss": 0.0018434078665450215,
+  "ema_val_loss": 0.0015299158403649926,
+  "pairs": 100000,
+  "epochs": 200,
+  "ema_decay": 0.95,
+  "seconds": 284.5763374499511
+ }
+}
