@@ -5,7 +5,7 @@
  "n_reference": 5000,
  "n_floor": 5000,
  "mmd_bandwidth": 5.511294841766357,
- "seconds": 3.265146086923778,
+ "seconds": 3.352026663022116,
  "rows": [
   {
    "model": "real (floor)",
@@ -84,6 +84,54 @@
    "latent_frechet": 0.021419360005641444,
    "latent_mmd": -7.510185241699219e-06,
    "latent_energy_gt4_fraction": 0.0
+  },
+  {
+   "model": "AE reconstruction of unseen train (R4)",
+   "sampler": "-",
+   "steps": 0,
+   "n": 5000,
+   "fid_like": 31.186214490108732,
+   "precision": 0.9027999639511108,
+   "recall": 0.2809999883174896,
+   "label_entropy": 2.281528856577362,
+   "mean_confidence": 0.8351399898529053,
+   "label_histogram": [
+    628,
+    500,
+    578,
+    368,
+    536,
+    357,
+    397,
+    466,
+    492,
+    678
+   ],
+   "pixel_variance": 0.3013875186443329
+  },
+  {
+   "model": "AE reconstruction of reference (R4)",
+   "sampler": "-",
+   "steps": 0,
+   "n": 5000,
+   "fid_like": 32.640578486318375,
+   "precision": 0.9275999665260315,
+   "recall": 0.31139999628067017,
+   "label_entropy": 2.281618553132577,
+   "mean_confidence": 0.8275108337402344,
+   "label_histogram": [
+    642,
+    465,
+    635,
+    373,
+    511,
+    359,
+    396,
+    476,
+    511,
+    632
+   ],
+   "pixel_variance": 0.2969473600387573
   },
   {
    "model": "teacher-hybrid",
@@ -623,6 +671,34 @@
    "latent_frechet": 0.09712281118264951,
    "latent_mmd": 0.0006613731384277344,
    "latent_energy_gt4_fraction": 0.00019999999494757503
+  },
+  {
+   "model": "student-endpoint_regression_100k",
+   "sampler": "direct",
+   "steps": 1,
+   "teacher_kind": "hybrid",
+   "n": 5000,
+   "fid_like": 45.51018017086758,
+   "precision": 0.8413999676704407,
+   "recall": 0.3610000014305115,
+   "label_entropy": 2.234274104837029,
+   "mean_confidence": 0.7732545137405396,
+   "label_histogram": [
+    650,
+    487,
+    740,
+    330,
+    487,
+    161,
+    359,
+    535,
+    492,
+    759
+   ],
+   "pixel_variance": 0.27412980794906616,
+   "latent_frechet": 0.09660684378102488,
+   "latent_mmd": 0.0006275177001953125,
+   "latent_energy_gt4_fraction": 0.0
   },
   {
    "model": "teacher-hybrid",

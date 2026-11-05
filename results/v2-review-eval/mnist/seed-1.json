@@ -5,7 +5,7 @@
  "n_reference": 5000,
  "n_floor": 5000,
  "mmd_bandwidth": 5.430784225463867,
- "seconds": 3.26157726184465,
+ "seconds": 3.3470288089010864,
  "rows": [
   {
    "model": "real (floor)",
@@ -84,6 +84,54 @@
    "latent_frechet": 0.7893407890485389,
    "latent_mmd": 0.010048508644104004,
    "latent_energy_gt4_fraction": 0.0
+  },
+  {
+   "model": "AE reconstruction of unseen train (R4)",
+   "sampler": "-",
+   "steps": 0,
+   "n": 5000,
+   "fid_like": 12.798563667350725,
+   "precision": 0.8715999722480774,
+   "recall": 0.7531999945640564,
+   "label_entropy": 2.295320331464686,
+   "mean_confidence": 0.9087021350860596,
+   "label_histogram": [
+    482,
+    616,
+    428,
+    473,
+    531,
+    483,
+    459,
+    601,
+    433,
+    494
+   ],
+   "pixel_variance": 0.23193079233169556
+  },
+  {
+   "model": "AE reconstruction of reference (R4)",
+   "sampler": "-",
+   "steps": 0,
+   "n": 5000,
+   "fid_like": 22.442907711936698,
+   "precision": 0.9505999684333801,
+   "recall": 0.850600004196167,
+   "label_entropy": 2.2951164717674377,
+   "mean_confidence": 0.893557608127594,
+   "label_histogram": [
+    490,
+    618,
+    485,
+    457,
+    539,
+    504,
+    412,
+    581,
+    424,
+    490
+   ],
+   "pixel_variance": 0.20900575816631317
   },
   {
    "model": "teacher-hybrid",
@@ -622,6 +670,34 @@
    "pixel_variance": 0.20621180534362793,
    "latent_frechet": 0.747018176691538,
    "latent_mmd": 0.010175585746765137,
+   "latent_energy_gt4_fraction": 0.0
+  },
+  {
+   "model": "student-endpoint_regression_100k",
+   "sampler": "direct",
+   "steps": 1,
+   "teacher_kind": "hybrid",
+   "n": 5000,
+   "fid_like": 23.96996235797687,
+   "precision": 0.7888000011444092,
+   "recall": 0.7881999611854553,
+   "label_entropy": 2.282330535249765,
+   "mean_confidence": 0.8272755742073059,
+   "label_histogram": [
+    423,
+    685,
+    425,
+    377,
+    620,
+    497,
+    407,
+    596,
+    415,
+    555
+   ],
+   "pixel_variance": 0.2072829008102417,
+   "latent_frechet": 0.7610656657653014,
+   "latent_mmd": 0.010317325592041016,
    "latent_energy_gt4_fraction": 0.0
   },
   {
