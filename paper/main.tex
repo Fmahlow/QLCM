@@ -37,10 +37,11 @@ qubits, depth and data re-uploading, the circuit beat the classical branch by th
 preregistered criterion in 1 of 23 cells and entanglement beat the surrogate in
 none; with six seeds per cell entanglement passed in 0 of 12 cells, and with a
 two-qubit correlator readout in 1 of 8. Pooled over cells, hybrid and surrogate
-students differ by $+1.0\%$ (90\% CI $[-1.4\%, +3.4\%]$), also with 5{,}000
-samples and latent-space metrics. Perturbing the branch is detected wherever the
-branch carries the model, so the null result is not an insensitive metric. With a
-wide backbone the branch acts mostly as a learned offset. Distillation works with
+students differ by $+1.0\%$ (90\% CI over seeds $[-3.1\%, +5.2\%]$) and remain
+equivalent with 5{,}000 samples and latent-space metrics, although the trained
+circuits are far from separable. Perturbing the branch is detected where it carries
+most of the model ($h\le4$), so the null result is not an insensitive metric. With
+a wide backbone the branch acts mostly as a learned offset. Distillation works with
 dataset-dependent quality: the one-step student matches or beats the 32-step
 teacher on three datasets and is 9--13\% worse on MNIST, and it is better than or
 equivalent to DPM-Solver++ with four evaluations on three datasets (MNIST
@@ -245,8 +246,13 @@ values $\langle Z_j\rangle$. The final rotation makes phases and entanglement
 visible to a $Z$ readout; without it, the last layer's $R_Z$ and CZ gates would
 not affect the output. The circuit has $2qL$ trainable parameters (16 for
 $q=4$, $L=2$), initialised from $\mathcal{N}(0,0.1^2)$, i.e.\ near the identity.
-With data re-uploading, the encoding rotations are repeated before every
-trainable layer. All circuits are simulated exactly as state vectors; the
+Because all CZ gates are diagonal and commute, $\mathrm{CZ}_{\mathrm{ring}}^2=I$:
+without re-uploading and with even $L$, the entangled circuit at zero trainable
+rotations is exactly the circuit without CZ gates, so it starts close to the
+separable function (relative to the output's spread, the entangling part is 3--22\%
+at initialisation in our runs; Section~\ref{sec:res-e9}). The separable surrogate
+is initialised with the same draw. With data re-uploading, the encoding rotations
+are repeated before every trainable layer, and the cancellation does not occur. All circuits are simulated exactly as state vectors; the
 data-independent gates of each forward pass are fused into one matrix, which is
 tested against gate-by-gate simulation.
 
@@ -466,8 +472,11 @@ geometric-mean ratio with a 90\% $t$-interval and call two models
 used by the preregistered criteria; we say ``significant'' when the interval
 excludes 1. Intervals are computed over all paired runs, and with the cell (or
 dataset) as the unit, i.e.\ a $t$-interval over per-cell mean log-ratios. Because
-all cells of a seed share an autoencoder, we also bootstrap pooled intervals over
-seeds (R6). Tables of \fidlike{} report arithmetic means; ratios are geometric
+all cells of a seed share an autoencoder, pooled sweep intervals are also computed
+with the seed as the unit: the mean log-ratio over cells for each seed, and a
+$t$-interval over seeds (R6; this replaces a percentile bootstrap over seeds used in
+an earlier draft, which is anti-conservative with three to six seeds). Where the two
+differ, claims rest on the wider one. Tables of \fidlike{} report arithmetic means; ratios are geometric
 means of paired ratios unless stated.
 
 % ---------------------------------------------------------------------------
@@ -486,10 +495,14 @@ a hybrid teacher work (Section~\ref{sec:res-distillation})?
 \paragraph{Floors.}
 \label{sec:res-e7}
 Table~\ref{tab:floors} places the models of the retrained campaign between the
-floors. On MNIST the 32-step teacher (18.7) is above the real floor (5.7) and the
-autoencoder's reconstructions of the same images (11.0), and on PneumoniaMNIST it
-(5.8) is close to the reconstruction floor (5.2). On Fashion-MNIST and KMNIST the
-autoencoder is the bottleneck: its reconstructions already score 30.2 and 159.6,
+floors. On MNIST the 32-step teacher (18.7) is above the real floor (5.7), but
+where it stands relative to the autoencoder depends on which images are
+reconstructed: reconstructions of held-out training images score 11.0, those of the
+reference images themselves 20.3 (per seed 17.0, 22.4, 21.6, against 16.1, 22.5,
+17.6 for the teacher). We therefore cannot say whether the MNIST teacher is limited
+by the decoder or by the denoiser. On PneumoniaMNIST the teacher (5.8) is close to
+the reconstruction floors (5.1--5.2). On Fashion-MNIST and KMNIST the autoencoder
+is the bottleneck under every reading: its reconstructions already score 30.2 and 159.6,
 with recall 0.30 and 0.08, against 42.9 and 212.5 for the teacher. KMNIST has a
 second limit: its unseen training images score 28.3 against the test reference,
 against 2.1 for other test images, so part of the gap to the test reference is a
@@ -530,13 +543,19 @@ Table~\ref{tab:e6full}). This only confirms that at $h=128$ the branch is a smal
 part of the function (E0, Section~\ref{sec:res-e0}); it does not show that the
 evaluation is sensitive. R2 therefore applied the same perturbations where the
 branch carries the model: the E10 hybrid pipelines with $h\in\{0,4,16\}$
-(Table~\ref{tab:r2}). There 44 of the 72 perturbations meet the detection rule.
-Removing the input-dependent part ($a=0$) worsens the one-step student by 14\% to
-274\% in all six cells. Permuting the branch outputs across samples is detected for
-the teacher at $h=0$ and for the student at MNIST $h=16$ and Fashion-MNIST $h=4$;
-for the one-step student without backbone it only reorders the samples and changes
-nothing. The evaluation therefore detects changes of the branch's
-function wherever the branch matters.
+(Table~\ref{tab:r2}). There 48 of the 84 preregistered perturbations meet the
+detection rule (a detected change in either direction). Removing the input-dependent
+part ($a=0$) worsens the one-step student by 14\% to 274\% in all six cells, and
+zeroing the readout is detected in all 12 cases. Permuting the branch outputs
+across samples is detected for the teacher at $h=0$ (both datasets) and MNIST
+$h=4$, and for the student at MNIST $h=16$ and Fashion-MNIST $h=4$; for the
+one-step student without backbone it only reorders the samples and changes nothing.
+Eleven of the detections are \emph{improvements}: amplifying the input-dependent
+part by 1.5--3 lowers \fidlike{} by up to 34\% at small $h$, the same preference for
+added spread that latent noise shows below. At $h=16$ on Fashion-MNIST only zeroing
+the readout is detected for the teacher. The evaluation therefore detects changes of
+the branch's function where the branch carries most of the model ($h\le4$), and less
+reliably at $h=16$.
 
 \begin{table}[t]
 \centering\footnotesize
@@ -548,9 +567,9 @@ input-dependent part of the branch output around its mean. $^\ast$: preregistere
 detection rule met (interval excludes 0 and change $\ge10\%$); $^\circ$: interval
 excludes 0 only.}
 \label{tab:r2}
-\begin{adjustbox}{max width=\textwidth}\begin{tabular}{lllcccccc}
+\begin{adjustbox}{max width=\textwidth}\begin{tabular}{lllccccccc}
 \toprule
-Dataset & $h$ & Model & $a=0$ & $a=0.5$ & $a=2$ & $a=3$ & permuted & readout zeroed \\
+Dataset & $h$ & Model & $a=0$ & $a=0.5$ & $a=1.5$ & $a=2$ & $a=3$ & permuted & readout zeroed \\
 \midrule
 \tabinput{generated/tab_r2.tex}
 \bottomrule
@@ -560,14 +579,16 @@ Dataset & $h$ & Model & $a=0$ & $a=0.5$ & $a=2$ & $a=3$ & permuted & readout zer
 \paragraph{Differences between independently trained models.}
 The equivalence results compare models trained independently, whose ratios vary
 from seed to seed. R3 asks whether the same machinery detects known capacity
-differences between such models (Table~\ref{tab:r3}). Halving or quartering the
+differences between such models (Table~\ref{tab:r3}; the pairs MLP $h=32$/$128$
+and hybrid $h=16$/$32$ were added after the preregistration). Halving or quartering the
 width of the backbone-only MLP changes the one-step \fidlike{} by $+9\%$ to $+78\%$;
 with six seeds every one of these differences is significant, with three seeds and
 5{,}000 samples all but one (Fashion-MNIST $h=16$ against $32$). Between hybrid
 networks, $h=16$ against $h=32$ ($+16$ to $+31\%$) is detected everywhere, and $h=32$
 against $h=128$ ($+2$ to $+11\%$) only on Fashion-MNIST with six seeds. Paired comparisons of
-independently trained pipelines therefore resolve differences of roughly 10--20\%
-with three seeds and somewhat less with six. Two further checks are in the
+independently trained pipelines therefore resolve differences of about 15--20\% or
+more with three seeds, not reliably smaller ones (an 18.6\% and an 8.4\% difference
+are missed); with six seeds an 8.5\% difference is detected and a 10.7\% one is not. Two further checks are in the
 appendix: the \fidlike{} of a fixed model's samples responds to known contamination
 (replacing 5\% of them by poor samples raises it by 7--19\%; added post hoc), and it \emph{decreases} when Gaussian noise is added
 to the generated latents (by up to 32\% at $s=0.4$), while precision falls and
@@ -627,8 +648,8 @@ exclude improvements of 10--15\%; the pooled intervals are the stronger evidence
 
 \paragraph{Pooled intervals.} Pooling cells, with the cell as the unit
 (Table~\ref{tab:sweeppooled}): over the 12 cells of E1, hybrid and surrogate
-students differ by $-0.0\%$ ($[-2.9\%,+2.9\%]$; bootstrapping over seeds
-$[-2.2\%,+2.1\%]$), and so do the six E2 configurations without re-uploading
+students differ by $-0.0\%$ ($[-2.9\%,+2.9\%]$; with the three seeds as units
+$[-5.3\%,+5.5\%]$), and so do the six E2 configurations without re-uploading
 ($+2.0\%$, $[-2.0\%,+6.1\%]$). With re-uploading, entanglement makes the student
 significantly worse: $+16.9\%$ ($[+0.2\%,+36.4\%]$). Against the classical branch,
 the hybrid is $-4.0\%$ ($[-9.3\%,+1.5\%]$) at $h\ge16$ and $+14.1\%$
@@ -696,14 +717,16 @@ the entanglement criterion in none; the classical branch meets the rule against
 the circuit in two cells (Fashion-MNIST $h=0$ and $4$). The counts are the same
 when the rule uses the geometric mean of paired ratios instead of the ratio of
 arithmetic means. The earlier single pass, MNIST $h=16$, does not survive
-($-6.3\%$, 4 of 6 seeds). Pooled with cells as the unit, hybrid and surrogate
-students differ by $+1.0\%$ ($[-1.4\%,+3.4\%]$; bootstrap over seeds
-$[-1.8\%,+4.4\%]$). Against the classical branch the hybrid is $-5.1\%$ at $h\ge16$
-($[-8.9\%,-1.1\%]$; bootstrap $[-7.0\%,-3.3\%]$), a small advantage inside the
-equivalence margin that the separable surrogate shares ($-4.0\%$ against the
-classical branch, $[-7.9\%,-0.0\%]$; bootstrap $[-6.6\%,-1.4\%]$); it reflects the
-separable trigonometric function, not entanglement. At $h\le8$ the hybrid is $+16.8\%$
-($[-1.1\%,+37.9\%]$). Per cell, six intervals exclude 1: the circuit is better than
+($-6.3\%$, 4 of 6 seeds). Pooled, hybrid and surrogate students differ by $+1.0\%$:
+$[-1.4\%,+3.4\%]$ with cells as units and $[-3.1\%,+5.2\%]$ with the six seeds as
+units, equivalent either way. Against the classical branch the hybrid is $-5.1\%$ at
+$h\ge16$ ($[-8.9\%,-1.1\%]$ over cells, $[-7.6\%,-2.5\%]$ over seeds), a small
+advantage inside the equivalence margin that the separable surrogate shares ($-4.0\%$
+against the classical branch, $[-7.9\%,-0.0\%]$ over cells, $[-7.4\%,-0.6\%]$ over
+seeds); it reflects the separable trigonometric function, not entanglement. At
+$h\le8$ the hybrid is $+16.8\%$ worse: not significant over cells
+($[-1.1\%,+37.9\%]$), but significant over seeds ($[+7.2\%,+27.2\%]$), where every
+seed favours the classical branch. Per cell, six intervals exclude 1: the circuit is better than
 the classical branch at MNIST $h=32$ and $128$ and Fashion-MNIST $h=32$ (by 6--11\%)
 and worse at Fashion-MNIST $h=0$ and $4$ (by 34--64\%), and in one cell, MNIST
 $h=8$, entanglement makes the student significantly \emph{worse} ($+7.9\%$,
@@ -764,6 +787,38 @@ the margin. With correlators the classical branch is much better than the circui
 also has many more parameters (90 against 16 for $q=4$), and we have not tested
 whether its advantage comes from that or from the wider learned nonlinearity.
 
+\subsubsection{Is the entanglement null an initialisation artefact?}
+\label{sec:res-entangling}
+
+Without re-uploading and with even depth the entangled circuit is initialised at
+(nearly) the separable function (Section~\ref{sec:network}), and hybrid and surrogate
+share their initial parameters. The equivalence of the two could therefore reflect an
+optimiser that never leaves the separable neighbourhood. We checked this after the
+second review (not preregistered): for every trained hybrid pipeline of E9 and E10,
+we evaluated the circuit with and without its CZ gates, at the same weights, on its
+actual input angles (the compressor applied to noised training latents at all
+levels), and took the RMS difference relative to the spread of the circuit's
+features (Appendix Table~\ref{tab:entangling}). At initialisation this
+\emph{entangling contribution} is 0.03--0.22; after training it is 0.06--0.79 in the
+teachers and 0.02--2.09 in the students (median 0.57), so most trained circuits are
+far from separable. Across the 84 student pipelines it is unrelated to the
+hybrid/surrogate ratio (Spearman $\rho=-0.03$, $p=0.76$;
+Figure~\ref{fig:entangling}). Entanglement is functionally present in the trained
+circuits, often strongly, and still does not change the quality of the generator.
+Re-uploading, where the cancellation does not occur, is also the one setting in which
+entanglement made results significantly worse (E2).
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.55\textwidth]{figures/fig_entangling.pdf}
+\caption{Entangling contribution of the trained student circuits (RMS difference
+between the circuit with and without CZ gates at the same weights, relative to the
+feature spread) against the hybrid/surrogate ratio of one-step \fidlike{} for the
+same seed (5{,}000 samples), for the 84 E9 and E10 student pipelines. Shaded band:
+$\pm10\%$ margin. Post hoc.}
+\label{fig:entangling}
+\end{figure}
+
 \begin{table}[t]
 \centering\small
 \caption{E9 pooled over the eight cells, cells as units (geometric-mean ratio and
@@ -783,19 +838,31 @@ Comparison & Mean & 90\% CI (cells) & Equivalent \\
 
 The circuit question is decided in the sweeps, which use 512 samples. R1 re-scored
 the existing E9 (seeds 0--2) and E10 (seeds 3--5) checkpoints with the robustness
-evaluation (Table~\ref{tab:r1}). The preregistered robustness criterion was that the
-pooled hybrid/surrogate comparisons stay equivalent in \fidlike{} and in the latent
-Fréchet distance. They do: $-1.0\%$ and $-0.3\%$ in E9, $+1.9\%$ and $+2.7\%$ in E10,
-all intervals inside $\pm6.5\%$, and the same for the teachers; precision and recall
-differ by less than two percentage points. The per-cell rules at 5{,}000 samples give
+evaluation (Table~\ref{tab:r1}; E9 with single-qubit and correlator readout reported
+separately, since their classical branches differ). The preregistered robustness
+criterion was that the pooled hybrid/surrogate comparisons stay equivalent in
+\fidlike{} and in the latent Fréchet distance. They do, for students and teachers,
+with all intervals inside $\pm10\%$ (student \fidlike{}: $+1.9\%$ in E10, $-1.1\%$
+and $-0.8\%$ in E9 with single-qubit and correlator readout). Three intervals exclude
+1 inside the margin: with the single-qubit readout the hybrid student is 2.5\% better
+in the latent Fréchet distance; with correlators the hybrid student is
+$1.8\times10^{-3}$ worse in latent MMD (against values of 7--14$\times10^{-3}$) and the
+hybrid teacher 2.3\% better in \fidlike{}. The per-cell rules at 5{,}000 samples give, on the student,
 one entanglement pass in each sweep (E9 MNIST $h=0$ with correlators, the same cell
 as at 512 samples; E10 MNIST $h=128$, which did not pass at 512 samples or with six
 seeds), one circuit pass in each (E9 MNIST $h=16$ with the single-qubit readout, the
 cell that passed in E1; E10 MNIST $h=32$, as at 512 samples), and ten passes of the
-classical branch against the circuit, all with $h\le8$. Against the classical branch
-at $h\ge16$, the hybrid student's advantage shrinks to $-4.7\%$ ($[-11.5\%,+2.6\%]$)
-and is not seen in the latent metric ($-1.3\%$). The conclusions of the sweeps do not
-depend on the sample size or on the metric.
+classical branch against the circuit, all with $h\le8$. On the teacher, the
+entanglement rule passes once (E10 MNIST $h=128$) and the circuit rule in five E9
+cells and one E10 cell, with pooled hybrid/classical-branch ratios of $-7.7\%$ and
+$-9.4\%$ (E9) and $-6.7\%$ (E10, $h\ge16$). This teacher advantage over the classical
+branch is shared by the separable surrogate ($-7.8\%$ and $-5.4\%$ pooled, and the
+same rule passes in five and two cells), and in the latent Fréchet distance it
+reverses ($+11\%$ and $+56\%$ in E9), so for the circuit-versus-classical-branch
+comparison the answer depends on the metric and on the role. Against the classical
+branch at $h\ge16$, the hybrid student's advantage shrinks to $-4.7\%$
+($[-11.5\%,+2.6\%]$) and is not seen in the latent metric ($-1.3\%$). The
+\emph{entanglement} conclusion does not depend on the sample size or the metric.
 
 \begin{table}[t]
 \centering\footnotesize
@@ -803,14 +870,15 @@ depend on the sample size or on the metric.
 \caption{R1: pooled comparisons of the E9 (seeds 0--2) and E10 (seeds 3--5) sweeps
 with 5{,}000 samples, cells as units (number of cells in parentheses). Geometric-mean
 ratio and 90\% interval of \fidlike{} and latent Fréchet distance, for the one-step
-student and the 32-step teacher; mean difference of the student's precision and
-recall (percentage points).}
+student and the 32-step teacher; mean difference of the student's latent MMD
+($\times10^3$, 90\% interval over cells) and of its precision and recall (percentage
+points).}
 \label{tab:r1}
-\begin{adjustbox}{max width=\textwidth}\begin{tabular}{llccccc}
+\begin{adjustbox}{max width=\textwidth}\begin{tabular}{llcccccc}
 \toprule
-& & \multicolumn{2}{c}{Student (1)} & \multicolumn{2}{c}{Teacher (32)} & \\
-\cmidrule(lr){3-4}\cmidrule(lr){5-6}
-Sweep & Comparison & \fidlike{} & Latent FD & \fidlike{} & Latent FD & $\Delta$P / $\Delta$R \\
+& & \multicolumn{2}{c}{Student (1)} & \multicolumn{2}{c}{Teacher (32)} & \multicolumn{2}{c}{Student (1)} \\
+\cmidrule(lr){3-4}\cmidrule(lr){5-6}\cmidrule(lr){7-8}
+Sweep & Comparison & \fidlike{} & Latent FD & \fidlike{} & Latent FD & $\Delta$MMD & $\Delta$P / $\Delta$R \\
 \midrule
 \tabinput{generated/tab_r1.tex}
 \bottomrule
@@ -849,6 +917,50 @@ $t$ after subtracting the mean at that $t$.}
 Dataset & Model (steps) & full & \texttt{features\_mean} & \texttt{readout\_zeroed} & branch & varying part \\
 \midrule
 \tabinput{generated/tab_e0.tex}
+\bottomrule
+\end{tabular}\end{adjustbox}
+\end{table}
+
+\subsubsection{The campaign: hybrid and classical models are equivalent at $h=128$}
+\label{sec:res-campaign-eq}
+\label{sec:res-equivalence}
+
+In the campaign, teachers with a circuit, with a circuit without entanglement, and
+without any branch have nearly identical DDIM curves on all datasets, and the same
+holds for the students of the hybrid teacher (Appendix Tables~\ref{tab:campaign}
+and~\ref{tab:students}). With 512 samples every comparison is equivalent within
+$\pm10\%$, with dataset-level intervals within $\pm4\%$ (Appendix
+Table~\ref{tab:equivalence}). With 5{,}000 samples (Table~\ref{tab:e7}) they remain
+equivalent: the largest interval bound is 2.1\% over runs and 3.2\% over datasets
+in \fidlike{} and 4.9\% in the latent Fréchet distance, latent MMD differs by at most
+$0.13\times10^{-3}$ on average (against values of order $10^{-2}$), and precision and
+recall by less than half a percentage point. The intervals are about as wide as with 512 samples (0.8--1.8 times
+narrower), so their width is set by the variation between independently trained
+pipelines, not by the number of samples. A few intervals exclude 1 while staying
+inside the margin: the hybrid student is 0.9\% better than the classical student
+(which has no branch and fewer parameters), the hybrid teacher 1.0\% worse than the
+no-entanglement teacher in the latent Fréchet distance (and $0.06\times10^{-3}$ higher
+in latent MMD), and on the new MNIST seeds
+the hybrid teacher 2.5\% better than the classical teacher when pooled over eight
+seeds (Section~\ref{sec:res-e5}). This regime is, however, the least informative about the circuit: the
+branch is 1.2\% of the parameters and its input-dependent output is small (E0).
+
+\begin{table}[t]
+\centering\footnotesize
+\setlength{\tabcolsep}{3pt}
+\caption{Equivalence tests with 5{,}000 samples on the retrained campaign
+(4 datasets $\times$ 3 seeds): geometric-mean ratio of paired \fidlike{} with 90\%
+intervals over runs and over datasets; the same for the latent Fréchet distance;
+mean difference of latent MMD ($\times10^3$, 90\% interval over runs); mean
+differences of precision and recall (percentage points).}
+\label{tab:e7}
+\begin{adjustbox}{max width=\textwidth}\begin{tabular}{llcccccccc}
+\toprule
+& & \multicolumn{3}{c}{\fidlike{}} & \multicolumn{2}{c}{Latent FD} & & \multicolumn{2}{c}{$\Delta$ (pp)} \\
+\cmidrule(lr){3-5}\cmidrule(lr){6-7}\cmidrule(lr){9-10}
+Model & Comparison & Ratio & CI (runs) & CI (datasets) & Ratio & CI (runs) & $\Delta$MMD & Prec. & Rec. \\
+\midrule
+\tabinput{generated/tab_e7.tex}
 \bottomrule
 \end{tabular}\end{adjustbox}
 \end{table}
@@ -964,28 +1076,8 @@ Comparison & Ratio & 90\% CI & Equiv. & Ratio & 90\% CI & Equiv. \\
 \end{tabular}\end{adjustbox}
 \end{table}
 
-\subsubsection{Hybrid and classical models are equivalent at $h=128$}
-\label{sec:res-campaign-eq}
-\label{sec:res-equivalence}
-
-In the campaign, teachers with a circuit, with a circuit without entanglement, and
-without any branch have indistinguishable DDIM curves on all datasets, and the same
-holds for the students of the hybrid teacher (Appendix Tables~\ref{tab:campaign}
-and~\ref{tab:students}). With 512 samples every comparison is equivalent within
-$\pm10\%$, with dataset-level intervals within $\pm4\%$ (Appendix
-Table~\ref{tab:equivalence}). With 5{,}000 samples (Table~\ref{tab:e7}) they remain
-equivalent: the largest interval bound is 2.1\% over runs and 3.2\% over datasets
-in \fidlike{} and 4.9\% in the latent Fréchet distance, latent MMD differs by at most
-$0.13\times10^{-3}$ on average (against values of order $10^{-2}$), and precision and
-recall by less than half a percentage point. The intervals are about as wide as with 512 samples (0.8--1.8 times
-narrower), so their width is set by the variation between independently trained
-pipelines, not by the number of samples. A few intervals exclude 1 while staying
-inside the margin: the hybrid student is 0.9\% better than the classical student
-(which has no branch and fewer parameters), the hybrid teacher 1.0\% worse than the
-no-entanglement teacher in the latent Fréchet distance, and on the new MNIST seeds
-the hybrid teacher 2.5\% better than the classical teacher when pooled over eight
-seeds. This regime is, however, the least informative about the circuit: the
-branch is 1.2\% of the parameters and its input-dependent output is small (E0).
+\subsubsection{Cost of sampling}
+\label{sec:res-cost}
 
 Per sampling step, models with a simulated circuit are about 8 times slower than
 classical ones at one step (10.8 against 1.3~ms for 512 samples) and about 13 times
@@ -995,25 +1087,7 @@ function 5--6 times faster: 2.2 against 10.8~ms for one-step students, and 54~ms
 the 32-step surrogate student against 329~ms for the 32-step hybrid teacher, both
 networks of the same size.
 
-\begin{table}[t]
-\centering\footnotesize
-\setlength{\tabcolsep}{3pt}
-\caption{Equivalence tests with 5{,}000 samples on the retrained campaign
-(4 datasets $\times$ 3 seeds): geometric-mean ratio of paired \fidlike{} with 90\%
-intervals over runs and over datasets; the same for the latent Fréchet distance;
-mean difference of latent MMD ($\times10^3$, 90\% interval over runs); mean
-differences of precision and recall (percentage points).}
-\label{tab:e7}
-\begin{adjustbox}{max width=\textwidth}\begin{tabular}{llcccccccc}
-\toprule
-& & \multicolumn{3}{c}{\fidlike{}} & \multicolumn{2}{c}{Latent FD} & & \multicolumn{2}{c}{$\Delta$ (pp)} \\
-\cmidrule(lr){3-5}\cmidrule(lr){6-7}\cmidrule(lr){9-10}
-Model & Comparison & Ratio & CI (runs) & CI (datasets) & Ratio & CI (runs) & $\Delta$MMD & Prec. & Rec. \\
-\midrule
-\tabinput{generated/tab_e7.tex}
-\bottomrule
-\end{tabular}\end{adjustbox}
-\end{table}
+
 
 \subsubsection{E8: distillation against higher-order solvers and endpoint regression}
 \label{sec:res-e8}
@@ -1035,9 +1109,10 @@ DPM-Solver++ with eight evaluations the student is worse on MNIST ($+17.4\%$) an
 KMNIST ($+10.5\%$), equal on Fashion-MNIST and better on PneumoniaMNIST. Endpoint
 regression with 10{,}000 pairs ties the consistency student on MNIST and KMNIST and is
 worse on Fashion-MNIST ($+9.4\%$) and PneumoniaMNIST ($+23.8\%$). With 100{,}000 pairs
-(R5), its held-out loss equals its training loss and the picture is the same
-($+7.0\%$ and $+23.4\%$; $-5.8\%$ and $+1.3\%$ on MNIST and KMNIST), so the deficit is
-not overfitting. The advantage of consistency distillation over these alternatives
+(R5; about ten times the consistency student's number of gradient steps, which
+favours the baseline), the picture is the same ($+7.0\%$ and $+23.4\%$; $-5.8\%$ and
+$+1.3\%$ on MNIST and KMNIST) and its held-out loss equals its training loss, so the
+deficit of the 10{,}000-pair model is not explained by too little data. The advantage of consistency distillation over these alternatives
 is real but dataset-dependent, and for a circuit-bearing teacher the relevant
 reference is a 4--8-evaluation solver, not DDIM.
 
@@ -1087,9 +1162,10 @@ leads one to expect. At an equal total shot budget, the distilled student is bet
 than the teacher run with fewer DDIM steps: one step with 64 shots (64 shots per
 sample) gives 27.9, against 52.2 for the four-step teacher (256 shots per sample);
 the 32-step teacher needs 2{,}048 shots per sample to reach 24.7. A higher-order
-solver is the stronger reference: on MNIST, DPM-Solver++ with four evaluations is not
-distinguishable from the one-step student (Section~\ref{sec:res-e8}), so there the
-saving is a factor of four in shots, not the factor implied by the DDIM comparison;
+solver is the stronger reference: on MNIST, the comparison of DPM-Solver++ with four
+evaluations and the one-step student is inconclusive (Section~\ref{sec:res-e8}), so
+there the saving is at most a factor of four in shots, not the factor implied by the
+DDIM comparison;
 we did not evaluate solvers under finite shots. Without the backbone, distillation
 fails (Section~\ref{sec:res-sweeps}), and noise and shots matter more: $p=0.03$ moves
 the one-step student from 144.4 to 158.4 (exact) and the four-step student from
@@ -1152,15 +1228,18 @@ models could have several explanations: the optimiser could ignore the branch,
 the circuit could compute something useful that a classical branch also computes,
 entanglement could matter but too little to detect, or the evaluation could be
 blind. The controls separate these. The evaluation detects changes of the branch's
-function wherever the branch carries the model, and differences of 10--20\% between
-independently trained models (R2, R3). The branch is used (zeroing it hurts) but
+function where the branch carries most of the model, and differences of about 15\%
+or more between independently trained models with three seeds (R2, R3). The branch is used (zeroing it hurts) but
 at $h=128$ mostly through its average output (E0). A classical layer of the same
-shape matches the circuit or beats it, markedly so when the branch carries the
-model (E1, E2, E10). Entanglement never improved on the exact separable surrogate
-in a way that survived replication: pooled over cells the two are equivalent within
+shape matches the circuit within the margin or beats it, markedly so when the branch
+carries the model (E1, E2, E10). Entanglement never improved on the exact separable
+surrogate in a way that was replicated: it met the per-cell criterion at most once
+per sweep, in a different cell each time, and pooled over cells the two are equivalent within
 a few percent with three or six seeds, 512 or 5{,}000 samples, classifier or latent
 metrics, single-qubit or correlator readout, and with data re-uploading
-entanglement made the student worse. The only consistent advantage of the circuit
+entanglement made the student worse. This is not because the trained circuits stay
+separable: most of them are far from it, and how far is unrelated to the
+hybrid/surrogate ratio. The only consistent advantage of the circuit
 over the classical branch (about 5\% with a wide backbone, inside the margin) is
 shared by the separable surrogate. Single cells cannot exclude effects of
 10--15\%.
@@ -1169,10 +1248,11 @@ shared by the separable surrogate. Single cells cannot exclude effects of
 $2q$ angles enters once, so each $\langle Z_j\rangle$ is a low-degree trigonometric
 polynomial in those angles \citep{schuld2021encoding}, followed by a learned linear
 readout, and the compressor and readout trained jointly with the circuit can absorb
-much of what the entangling layers would add. With weights initialised near the
-identity, the circuit also starts close to a product of single-qubit rotations.
-Giving the readout the two-qubit correlators did not make entanglement detectable
-(E9). We did not test a different initialisation, deeper circuits with more
+much of what the entangling layers would add. With even depth and no re-uploading
+the CZ layers cancel at initialisation, so the circuit starts at the separable
+function, but training moves it away (Section~\ref{sec:res-entangling}) without
+changing the result, and giving the readout the two-qubit correlators did not make
+entanglement detectable either (E9). We did not test a different initialisation, deeper circuits with more
 entangling layers, or a readout rank fixed across $q$. Re-uploading enlarges the
 frequency spectrum \citep{schuld2021encoding} but, here, mainly made optimisation
 harder.
@@ -1208,7 +1288,9 @@ perturbation has to be checked, not assumed.
 branch on a classical MLP in a 16-dimensional autoencoder latent, with 4--8
 qubits, depth up to 4, angle encoding, a hardware-efficient ansatz and
 single-qubit or two-qubit correlator readout. Other placements, encodings,
-readouts or ans\"atze could behave differently. Most cells have three seeds (six in
+readouts or ans\"atze could behave differently; in particular, all configurations
+without re-uploading have even depth, so the entangled circuit is initialised at the
+separable function. Most cells have three seeds (six in
 E10; E2 still has three, and its re-uploading cells are the noisiest). The student
 budget was selected on the test metric; E5 shows that this did not create the
 equivalences and did not inflate the one-step result, but it did inflate the
@@ -1247,11 +1329,12 @@ We distilled hybrid quantum latent diffusion teachers into few-step consistency
 students and asked, with controls that change one component at a time, whether the
 circuit contributes. Across 23 preregistered capacity and scaling cells, the circuit
 met the contribution criterion against a shape-matched classical branch once, and
-entanglement never beat an exact separable surrogate; the same held with six seeds
-per cell, with a two-qubit correlator readout and with 5{,}000 samples and
-latent-space metrics. Pooled over cells, hybrid and surrogate are equivalent within
+entanglement never beat an exact separable surrogate. With six seeds per cell, with a
+two-qubit correlator readout and with 5{,}000 samples, entanglement met the criterion
+at most once per sweep and never in the same cell twice, although the trained circuits
+are far from separable. Pooled over cells, hybrid and surrogate are equivalent within
 a few percent, and with data re-uploading entanglement made results worse. The
-evaluation detects changes of the branch wherever the branch carries the model, and
+evaluation detects changes of the branch where the branch carries most of the model, and
 in the trained models with a wide backbone the branch acts mostly as a learned
 offset. Distillation transferred across four datasets: one-step students matched or
 beat the 32-step teacher on three and were 9--13\% worse on MNIST, and they were
@@ -1319,6 +1402,24 @@ teacher (32 steps): entanglement (hybrid/surrogate, \texttt{zz}), circuit
 Dataset & $h$ & $q$/depth & Hybrid \texttt{zz} & Surrogate \texttt{zz} & Cl.\ branch \texttt{zz} & Hybrid \texttt{z} & ent. & circ. & corr. & ent. & circ. & corr. \\
 \midrule
 \tabinput{generated/tab_e9.tex}
+\bottomrule
+\end{tabular}\end{adjustbox}
+\end{table}
+
+\begin{table}[h]
+\centering\footnotesize
+\setlength{\tabcolsep}{3pt}
+\caption{Entangling contribution of trained hybrid circuits (post hoc): RMS
+difference between the circuit's features with and without CZ gates at the same
+weights, on the circuit's input angles for noised training latents, relative to the
+feature spread; mean over three seeds, at initialisation and after training, and the
+hybrid/surrogate ratio of one-step \fidlike{} (5{,}000 samples, R1).}
+\label{tab:entangling}
+\begin{adjustbox}{max width=\textwidth}\begin{tabular}{lllllcccc}
+\toprule
+Sweep & Dataset & $h$ & $q$/depth & Readout & Init. & Teacher & Student & Hybrid/surrogate \\
+\midrule
+\tabinput{generated/tab_entangling.tex}
 \bottomrule
 \end{tabular}\end{adjustbox}
 \end{table}

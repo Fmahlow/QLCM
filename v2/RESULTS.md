@@ -402,3 +402,16 @@ inteira (campanha, replicação, E6-E10) levou ~3h15 na RTX 3080 Ti.
 - **E10, E1 com 6 seeds:** circuito 1/12 (MNIST h=32), entrelaçamento 0/12; o passe antigo (MNIST h=16)
   não se mantém. Agregado hybrid/surrogate +1,0% [-1,4; +3,4]; hybrid/classical_branch em h>=16
   -5,1% [-8,9; -1,1], vantagem compartilhada pelo surrogate separável.
+
+### Rodadas de revisão simulada (2026-11-04)
+
+Rodada 1 (major, perto de minor) respondida com R1-R6 pré-registrados. R1: varreduras E9/E10 com
+5.000 amostras mantêm a equivalência hybrid/surrogate. R2: perturbações do ramo em h<=4 detectadas
+(48/84 no total, 11 delas melhorias do FID-like). R3: diferenças de ~15-20% entre pipelines treinadas
+independentemente são detectadas com 3 seeds. R5: regressão do endpoint com 100k pares não muda o E8.
+Rodada 2 (minor): intervalo t por seeds no lugar do bootstrap (E10 hybrid/surrogate +1,0% [-3,1; +5,2];
+hybrid pior que classical_branch em h<=8, +16,8% [+7,2; +27,2]). Diagnóstico post hoc: com profundidade
+par e sem re-uploading o circuito começa na função separável (CZ_ring^2 = I), mas depois do treino a
+contribuição do entrelaçamento chega a 2,1 do desvio das features (mediana 0,57 nos estudantes) e não se
+relaciona com a razão hybrid/surrogate (Spearman -0,03, p=0,76, n=84). Respostas em
+`paper/reviews/response-2026-11-04.md`.

@@ -4566,62 +4566,166 @@
   ]
  },
  "r1": {
-  "E9/hybrid/surrogate/student/fid_like": {
-   "k": 16,
-   "mean_pct": -0.9557500089063087,
-   "lo_pct": -4.781774717252296,
-   "hi_pct": 3.024010657292342,
+  "E9/hybrid/surrogate, \\texttt{z}/student/fid_like": {
+   "k": 8,
+   "mean_pct": -1.0935006412193249,
+   "lo_pct": -5.244007637525483,
+   "hi_pct": 3.2388070823747395,
    "equivalent": true
   },
-  "E9/hybrid/surrogate/student/latent_frechet": {
-   "k": 16,
-   "mean_pct": -0.320072072326949,
-   "lo_pct": -3.7901723823623334,
-   "hi_pct": 3.275187968890614,
+  "E9/hybrid/surrogate, \\texttt{z}/student/latent_frechet": {
+   "k": 8,
+   "mean_pct": -2.4635721781251396,
+   "lo_pct": -4.550124634089214,
+   "hi_pct": -0.331407288045249,
    "equivalent": true
   },
-  "E9/hybrid/surrogate/teacher/fid_like": {
-   "k": 16,
-   "mean_pct": -0.77746449070073,
-   "lo_pct": -2.0088377980660876,
-   "hi_pct": 0.46938245926686495,
+  "E9/hybrid/surrogate, \\texttt{z}/teacher/fid_like": {
+   "k": 8,
+   "mean_pct": 0.7573811928987872,
+   "lo_pct": -0.9157208852934362,
+   "hi_pct": 2.4587346807905197,
    "equivalent": true
   },
-  "E9/hybrid/surrogate/teacher/latent_frechet": {
-   "k": 16,
-   "mean_pct": 0.32491157549612293,
-   "lo_pct": -2.0164743059244095,
-   "hi_pct": 2.722246534140438,
+  "E9/hybrid/surrogate, \\texttt{z}/teacher/latent_frechet": {
+   "k": 8,
+   "mean_pct": 0.5912426370723978,
+   "lo_pct": -1.7050656624584937,
+   "hi_pct": 2.94119593715223,
    "equivalent": true
   },
-  "E9/hybrid/classical branch/student/fid_like": {
-   "k": 16,
-   "mean_pct": 38.426182403373254,
-   "lo_pct": 18.194579705213144,
-   "hi_pct": 62.12086901584713,
+  "E9/hybrid/surrogate, \\texttt{z}/mmd_x1000": [
+   [
+    -0.5350808302561442,
+    -1.6090574985434882,
+    0.5388958380311998
+   ],
+   [
+    -0.09598831335703531,
+    -0.22835019838467624,
+    0.03637357167060562
+   ]
+  ],
+  "E9/hybrid/surrogate, \\texttt{zz}/student/fid_like": {
+   "k": 8,
+   "mean_pct": -0.8178075263425288,
+   "lo_pct": -8.168162059256945,
+   "hi_pct": 7.120880126882501,
+   "equivalent": true
+  },
+  "E9/hybrid/surrogate, \\texttt{zz}/student/latent_frechet": {
+   "k": 8,
+   "mean_pct": 1.870534461358342,
+   "lo_pct": -5.3031721937625615,
+   "hi_pct": 9.58768136010626,
+   "equivalent": true
+  },
+  "E9/hybrid/surrogate, \\texttt{zz}/teacher/fid_like": {
+   "k": 8,
+   "mean_pct": -2.2889297405833897,
+   "lo_pct": -3.8475925535541133,
+   "hi_pct": -0.705000480010809,
+   "equivalent": true
+  },
+  "E9/hybrid/surrogate, \\texttt{zz}/teacher/latent_frechet": {
+   "k": 8,
+   "mean_pct": 0.059285667097208616,
+   "lo_pct": -4.57706917832107,
+   "hi_pct": 4.9209090728870475,
+   "equivalent": true
+  },
+  "E9/hybrid/surrogate, \\texttt{zz}/mmd_x1000": [
+   [
+    1.8402238686879477,
+    0.16646425146429356,
+    3.513983485911602
+   ],
+   [
+    0.14657278855641684,
+    -0.0775412152039058,
+    0.3706867923167395
+   ]
+  ],
+  "E9/hybrid/classical branch, \\texttt{z}/student/fid_like": {
+   "k": 8,
+   "mean_pct": 15.338557889015991,
+   "lo_pct": -0.834168397956836,
+   "hi_pct": 34.14885672822621,
    "equivalent": false
   },
-  "E9/hybrid/classical branch/student/latent_frechet": {
-   "k": 16,
-   "mean_pct": 51.985781570798494,
-   "lo_pct": 27.243364303096197,
-   "hi_pct": 81.53935119683399,
+  "E9/hybrid/classical branch, \\texttt{z}/student/latent_frechet": {
+   "k": 8,
+   "mean_pct": 18.416251698240927,
+   "lo_pct": 5.751444914471482,
+   "hi_pct": 32.59779738803608,
    "equivalent": false
   },
-  "E9/hybrid/classical branch/teacher/fid_like": {
-   "k": 16,
-   "mean_pct": -8.529691039857223,
-   "lo_pct": -12.449030975807041,
-   "hi_pct": -4.434896443556513,
+  "E9/hybrid/classical branch, \\texttt{z}/teacher/fid_like": {
+   "k": 8,
+   "mean_pct": -7.675280293507203,
+   "lo_pct": -10.440683258789996,
+   "hi_pct": -4.82448751241672,
    "equivalent": false
   },
-  "E9/hybrid/classical branch/teacher/latent_frechet": {
-   "k": 16,
-   "mean_pct": 31.878371446451315,
-   "lo_pct": 10.682262225442262,
-   "hi_pct": 57.13362291008857,
+  "E9/hybrid/classical branch, \\texttt{z}/teacher/latent_frechet": {
+   "k": 8,
+   "mean_pct": 11.39181882032878,
+   "lo_pct": 3.7769024071338864,
+   "hi_pct": 19.565500725988016,
    "equivalent": false
   },
+  "E9/hybrid/classical branch, \\texttt{z}/mmd_x1000": [
+   [
+    1.988351345062256,
+    -0.3415753632816061,
+    4.318278053406118
+   ],
+   [
+    0.5950331687927246,
+    0.06883262748490193,
+    1.1212337101005474
+   ]
+  ],
+  "E9/hybrid/classical branch, \\texttt{zz}/student/fid_like": {
+   "k": 8,
+   "mean_pct": 66.13531784583542,
+   "lo_pct": 28.00061779352687,
+   "hi_pct": 115.63133296949263,
+   "equivalent": false
+  },
+  "E9/hybrid/classical branch, \\texttt{zz}/student/latent_frechet": {
+   "k": 8,
+   "mean_pct": 95.07185431397691,
+   "lo_pct": 46.66168471421035,
+   "hi_pct": 159.46127933580456,
+   "equivalent": false
+  },
+  "E9/hybrid/classical branch, \\texttt{zz}/teacher/fid_like": {
+   "k": 8,
+   "mean_pct": -9.376194719434672,
+   "lo_pct": -17.396427836389496,
+   "hi_pct": -0.5772526730052907,
+   "equivalent": false
+  },
+  "E9/hybrid/classical branch, \\texttt{zz}/teacher/latent_frechet": {
+   "k": 8,
+   "mean_pct": 56.13269483839505,
+   "lo_pct": 10.511109481800428,
+   "hi_pct": 120.58794370817529,
+   "equivalent": false
+  },
+  "E9/hybrid/classical branch, \\texttt{zz}/mmd_x1000": [
+   [
+    5.110730727513631,
+    1.9305133137277566,
+    8.290948141299506
+   ],
+   [
+    0.3864020109176636,
+    -1.0077005592788282,
+    1.7805045811141553
+   ]
+  ],
   "E10/hybrid/surrogate/student/fid_like": {
    "k": 12,
    "mean_pct": 1.8709778537420174,
@@ -4650,6 +4754,18 @@
    "hi_pct": 5.069186047237495,
    "equivalent": true
   },
+  "E10/hybrid/surrogate/mmd_x1000": [
+   [
+    0.17039974530537935,
+    -1.1630071580690808,
+    1.5038066486798396
+   ],
+   [
+    0.19915567504035103,
+    -0.17510475936743186,
+    0.5734161094481339
+   ]
+  ],
   "E10/hybrid/classical branch, $h\\ge16$/student/fid_like": {
    "k": 6,
    "mean_pct": -4.735710334113497,
@@ -4678,6 +4794,18 @@
    "hi_pct": 13.27059855434458,
    "equivalent": false
   },
+  "E10/hybrid/classical branch, $h\\ge16$/mmd_x1000": [
+   [
+    0.08067819807264538,
+    -0.6991278770015285,
+    0.8604842731468193
+   ],
+   [
+    0.11630190743340385,
+    -0.7545718062045093,
+    0.987175621071317
+   ]
+  ],
   "E10/hybrid/classical branch, $h\\le8$/student/fid_like": {
    "k": 6,
    "mean_pct": 18.379852521742144,
@@ -4705,7 +4833,19 @@
    "lo_pct": -1.1685787344847376,
    "hi_pct": 13.854148847022563,
    "equivalent": false
-  }
+  },
+  "E10/hybrid/classical branch, $h\\le8$/mmd_x1000": [
+   [
+    2.2308362854851613,
+    -2.4403719818510354,
+    6.9020445528213585
+   ],
+   [
+    0.031186474694146076,
+    -0.6117791984193062,
+    0.6741521478075982
+   ]
+  ]
  },
  "r1_rules": {
   "E9/surrogate/student": 1,
@@ -4724,6 +4864,86 @@
   "E10/classical_branch/student/against": 3,
   "E10/classical_branch/teacher": 1,
   "E10/classical_branch/teacher/against": 0
+ },
+ "r1_teacher_sur_vs_cb": {
+  "E9": {
+   "k": 16,
+   "mean_pct": -7.812969613571252,
+   "lo_pct": -11.383810535315654,
+   "hi_pct": -4.098239578952212,
+   "equivalent": false
+  },
+  "E10": {
+   "k": 12,
+   "mean_pct": -5.434164838433075,
+   "lo_pct": -9.072398114284109,
+   "hi_pct": -1.6503570495079223,
+   "equivalent": true
+  }
+ },
+ "r1_teacher_sur_vs_cb_rule": {
+  "E9": 5,
+  "E10": 2
+ },
+ "r1_teacher_circuit_pass_cells": {
+  "E9": [
+   [
+    "mnist",
+    "16",
+    "4",
+    "2",
+    "z"
+   ],
+   [
+    "fashion_mnist",
+    "0",
+    "4",
+    "2",
+    "zz"
+   ],
+   [
+    "fashion_mnist",
+    "4",
+    "4",
+    "2",
+    "zz"
+   ],
+   [
+    "fashion_mnist",
+    "0",
+    "6",
+    "4",
+    "zz"
+   ],
+   [
+    "fashion_mnist",
+    "0",
+    "6",
+    "4",
+    "z"
+   ]
+  ],
+  "E10": [
+   [
+    "mnist",
+    "32",
+    "4",
+    "2",
+    "z"
+   ]
+  ]
+ },
+ "r1_teacher_ent_pass_cells": {
+  "E9": [],
+  "E10": [
+   [
+    "mnist",
+    "128",
+    "4",
+    "2",
+    "z"
+   ]
+  ]
  },
  "r2": {
   "mnist/0/student/scale/0.0": {
@@ -4750,6 +4970,19 @@
     0.5147700960180135,
     0.5505668339458565,
     0.5036779584377689
+   ]
+  },
+  "mnist/0/student/scale/1.5": {
+   "n": 3,
+   "mean_pct": -16.593088606551763,
+   "lo_pct": -20.92105310978868,
+   "hi_pct": -12.0282560432573,
+   "equivalent": false,
+   "tost_p": 0.9789617714288311,
+   "log_ratios": [
+    -0.15832806786567888,
+    -0.21745678260759282,
+    -0.16853217842247475
    ]
   },
   "mnist/0/student/scale/2.0": {
@@ -4830,6 +5063,19 @@
     0.12373121420966153
    ]
   },
+  "mnist/0/teacher/scale/1.5": {
+   "n": 3,
+   "mean_pct": -6.109849462213002,
+   "lo_pct": -15.554044593264415,
+   "hi_pct": 4.390557553040275,
+   "equivalent": false,
+   "tost_p": 0.23396382143365163,
+   "log_ratios": [
+    -0.13085514409491844,
+    -0.05162813664056068,
+    -0.006650814395071486
+   ]
+  },
   "mnist/0/teacher/scale/2.0": {
    "n": 3,
    "mean_pct": -1.4324057552444147,
@@ -4906,6 +5152,19 @@
     0.4178254845740236,
     0.5934498927751622,
     0.35145124735061284
+   ]
+  },
+  "mnist/4/student/scale/1.5": {
+   "n": 3,
+   "mean_pct": -6.655963377175977,
+   "lo_pct": -23.539412628374446,
+   "hi_pct": 13.955561584876586,
+   "equivalent": false,
+   "tost_p": 0.3680777563567471,
+   "log_ratios": [
+    0.0561508214238958,
+    -0.17916222674652496,
+    -0.08362319455825973
    ]
   },
   "mnist/4/student/scale/2.0": {
@@ -4986,6 +5245,19 @@
     0.14448309715477692
    ]
   },
+  "mnist/4/teacher/scale/1.5": {
+   "n": 3,
+   "mean_pct": -5.110692540799255,
+   "lo_pct": -11.621675457948244,
+   "hi_pct": 1.8799656674018284,
+   "equivalent": false,
+   "tost_p": 0.11021814921928381,
+   "log_ratios": [
+    -0.048854868304722424,
+    -0.0963107464459108,
+    -0.012211860398165537
+   ]
+  },
   "mnist/4/teacher/scale/2.0": {
    "n": 3,
    "mean_pct": -0.2239079029379032,
@@ -5062,6 +5334,19 @@
     0.08314683306593948,
     0.18868912462954068,
     0.0997528001276026
+   ]
+  },
+  "mnist/16/student/scale/1.5": {
+   "n": 3,
+   "mean_pct": -0.5481725135144444,
+   "lo_pct": -9.818873527107908,
+   "hi_pct": 9.675564912961686,
+   "equivalent": false,
+   "tost_p": 0.05778927691807696,
+   "log_ratios": [
+    0.012664802620513683,
+    -0.07044966940485765,
+    0.04129445201096006
    ]
   },
   "mnist/16/student/scale/2.0": {
@@ -5142,6 +5427,19 @@
     0.11003756825022273
    ]
   },
+  "mnist/16/teacher/scale/1.5": {
+   "n": 3,
+   "mean_pct": -5.531863684981742,
+   "lo_pct": -6.878525035631,
+   "hi_pct": -4.16572780609904,
+   "equivalent": true,
+   "tost_p": 0.008000903477676088,
+   "log_ratios": [
+    -0.05508435296328205,
+    -0.04945024371035523,
+    -0.06618817392226749
+   ]
+  },
   "mnist/16/teacher/scale/2.0": {
    "n": 3,
    "mean_pct": -7.896811567572248,
@@ -5218,6 +5516,19 @@
     0.4196901893209584,
     0.5550087686136362,
     0.5278794246024948
+   ]
+  },
+  "fashion_mnist/0/student/scale/1.5": {
+   "n": 3,
+   "mean_pct": -26.812676455187102,
+   "lo_pct": -32.090775915198385,
+   "hi_pct": -21.124347983061288,
+   "equivalent": false,
+   "tost_p": 0.9931555736735307,
+   "log_ratios": [
+    -0.27616624746788193,
+    -0.3617657638110711,
+    -0.29851185562533944
    ]
   },
   "fashion_mnist/0/student/scale/2.0": {
@@ -5298,6 +5609,19 @@
     0.4974729168968109
    ]
   },
+  "fashion_mnist/0/teacher/scale/1.5": {
+   "n": 3,
+   "mean_pct": -28.30157448828382,
+   "lo_pct": -32.84169300477975,
+   "hi_pct": -23.4545292926312,
+   "equivalent": false,
+   "tost_p": 0.9956056506038408,
+   "log_ratios": [
+    -0.3567425302568422,
+    -0.2879365398664041,
+    -0.3534251239185077
+   ]
+  },
   "fashion_mnist/0/teacher/scale/2.0": {
    "n": 3,
    "mean_pct": -30.53709503140506,
@@ -5374,6 +5698,19 @@
     0.36621703165660646,
     0.21925310424162908,
     0.3597856412955043
+   ]
+  },
+  "fashion_mnist/4/student/scale/1.5": {
+   "n": 3,
+   "mean_pct": -19.321983693247834,
+   "lo_pct": -26.998372728827967,
+   "hi_pct": -10.838394176962185,
+   "equivalent": false,
+   "tost_p": 0.9633402703651027,
+   "log_ratios": [
+    -0.2806528782269369,
+    -0.19771356289534125,
+    -0.16574574001461267
    ]
   },
   "fashion_mnist/4/student/scale/2.0": {
@@ -5454,6 +5791,19 @@
     0.4732586306317449
    ]
   },
+  "fashion_mnist/4/teacher/scale/1.5": {
+   "n": 3,
+   "mean_pct": -16.961168197176246,
+   "lo_pct": -34.35266902402627,
+   "hi_pct": 5.037744637345876,
+   "equivalent": false,
+   "tost_p": 0.8112871499004306,
+   "log_ratios": [
+    -0.07118723961972938,
+    -0.14537169272552486,
+    -0.34102657131835645
+   ]
+  },
   "fashion_mnist/4/teacher/scale/2.0": {
    "n": 3,
    "mean_pct": -17.18829796992708,
@@ -5530,6 +5880,19 @@
     0.07076177531459903,
     0.124697158189958,
     0.04394596262257902
+   ]
+  },
+  "fashion_mnist/16/student/scale/1.5": {
+   "n": 3,
+   "mean_pct": -8.519859034491162,
+   "lo_pct": -15.53492386770846,
+   "hi_pct": -0.9221731125629962,
+   "equivalent": false,
+   "tost_p": 0.4200168245262113,
+   "log_ratios": [
+    -0.07820929531501943,
+    -0.14085291731101204,
+    -0.04808261504764672
    ]
   },
   "fashion_mnist/16/student/scale/2.0": {
@@ -5610,6 +5973,19 @@
     0.00987981234349228
    ]
   },
+  "fashion_mnist/16/teacher/scale/1.5": {
+   "n": 3,
+   "mean_pct": -0.5614208483233685,
+   "lo_pct": -8.015097793629678,
+   "hi_pct": 7.4962389101661975,
+   "equivalent": true,
+   "tost_p": 0.039138640888000564,
+   "log_ratios": [
+    0.002435208668101735,
+    0.036023852482177855,
+    -0.055349143309912904
+   ]
+  },
   "fashion_mnist/16/teacher/scale/2.0": {
    "n": 3,
    "mean_pct": -2.55966081095218,
@@ -5663,8 +6039,10 @@
    ]
   }
  },
- "r2_detected": 44,
- "r2_total": 72,
+ "r2_detected": 48,
+ "r2_total": 84,
+ "r2_detected_improvements": 11,
+ "r2_min_pct": -34.152672655834934,
  "r2_a0_detected_student": 6,
  "r2_a0_range_student": [
   14.175009591795451,
@@ -5982,35 +6360,97 @@
    }
   }
  },
- "r6_bootstrap": {
+ "r6_seed_t": {
   "E10 hybrid/surrogate": {
    "mean_pct": 0.9648638008699084,
-   "lo_pct": -1.8291859516309183,
-   "hi_pct": 4.364905769398741,
+   "lo_pct": -3.0764853904732936,
+   "hi_pct": 5.1747221857990855,
    "equivalent": true,
-   "seeds": 6
+   "seeds": 6,
+   "per_seed_pct": [
+    -3.405339929724849,
+    0.4076537464533292,
+    2.952122786258893,
+    10.4279808530086,
+    -1.0605297471649733,
+    -2.90035830339046
+   ]
   },
   "E10 hybrid/classical_branch h>=16": {
    "mean_pct": -5.115898690173182,
-   "lo_pct": -7.031741981317607,
-   "hi_pct": -3.2519817454729427,
+   "lo_pct": -7.616977832785443,
+   "hi_pct": -2.547108005646992,
    "equivalent": true,
-   "seeds": 6
+   "seeds": 6,
+   "per_seed_pct": [
+    -0.9023959254416458,
+    -4.5408840465674505,
+    -6.511207754473636,
+    -5.277331308159305,
+    -3.253020059149525,
+    -9.961295572316853
+   ]
   },
   "E10 surrogate/classical_branch h>=16": {
    "mean_pct": -4.042733259274911,
-   "lo_pct": -6.581067365319915,
-   "hi_pct": -1.4459962022776551,
+   "lo_pct": -7.404468653412799,
+   "hi_pct": -0.5589480783293022,
    "equivalent": true,
-   "seeds": 6
+   "seeds": 6,
+   "per_seed_pct": [
+    1.8804876171654161,
+    -10.08161191874095,
+    -4.608328393274985,
+    -3.4909480981913488,
+    -1.1160592685986237,
+    -6.389748524432171
+   ]
+  },
+  "E10 hybrid/classical_branch h<=8": {
+   "mean_pct": 16.777736806440657,
+   "lo_pct": 7.239648143694843,
+   "hi_pct": 27.16416036130118,
+   "equivalent": false,
+   "seeds": 6,
+   "per_seed_pct": [
+    11.161471769388221,
+    9.07547902067385,
+    22.530108702117847,
+    40.96670899101746,
+    6.837972362504363,
+    13.342788073562195
+   ]
   },
   "E1 hybrid/surrogate (3 seeds)": {
    "mean_pct": -0.049474667808768746,
-   "lo_pct": -2.150708523085465,
-   "hi_pct": 2.0968814734642516,
+   "lo_pct": -5.316933259545387,
+   "hi_pct": 5.5110259743265555,
    "equivalent": true,
-   "seeds": 3
+   "seeds": 3,
+   "per_seed_pct": [
+    -3.405339929724849,
+    0.4076537464533292,
+    2.952122786258893
+   ]
   }
+ },
+ "entangling": {
+  "init_range": [
+   0.02949245646595955,
+   0.22451239824295044
+  ],
+  "teacher_range": [
+   0.0632588267326355,
+   0.7883068919181824
+  ],
+  "student_range": [
+   0.01656423695385456,
+   2.093440294265747
+  ],
+  "student_median": 0.5713002979755402,
+  "spearman_student_vs_logratio": -0.03363369444163208,
+  "spearman_p": 0.7613374478610802,
+  "n": 84
  },
  "forest6_equivalent": 9,
  "forest6_n": 46,
