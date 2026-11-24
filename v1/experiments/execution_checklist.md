@@ -145,3 +145,157 @@ distillation. The QLCM-R-vs-classical and QLCM-H-failure findings from the
 3-seed statistics for every MNIST ablation cell and the Fashion-MNIST primary
 comparison (previously seed-0-only). Fashion-MNIST mode collapse toward a
 single class persisted after all three fixes and is not yet explained.
+
+## Execution Log (2026-09-15): quantum diffusion baseline (same-architecture speed test)
+
+Motivation: the classical-vs-QLCM-R comparison above uses the same sampler
+and step counts on both sides, so it cannot support a claim that QLCM is
+*faster* than anything — only that it is not better at equal step count. The
+speed claim that would matter (quantum consistency needs fewer steps than
+existing quantum diffusion models) requires comparing against an iterative,
+many-step quantum denoiser. Rather than rely on cross-paper NFE counts
+against `kolle2024qddm`/`zhang2023quddpm`/`kwun2024mixedquddpm`, we built a
+same-architecture internal baseline: `QuantumLatentTeacherScoreNet`
+(`src/qlcm/teacher.py`), the same encoder/quantum-circuit/decoder module used
+inside QLCM-R and QLCM-H (4 qubits, depth 2, 44,584 parameters), trained via
+`scripts/train_quantum_teacher.py` with the standard DDPM noise-prediction
+loss for 150 epochs (matching the classical teacher's budget) instead of
+consistency distillation. `src/qlcm/sampling.py:sample_diffusion` samples it
+with deterministic DDIM (reusing `LatentNoiseSchedule.ddim_step`) at a
+configurable step count; `scripts/evaluate_quantum_diffusion.py` runs this
+and computes the same classifier-feature metrics used everywhere else.
+
+Ran on MNIST, 4 qubits/depth 2, 3 seeds:
+
+1. Training loss plateaus at 0.954±0.001 noise MSE (last-10-epoch average)
+   across all 3 seeds — essentially the 1.0 MSE of a trivial zero-noise
+   predictor (noise is unit-variance), and far above the classical teacher's
+   documented ≈0.85 plateau, despite the encoder/decoder wrapper (44,584
+   params) being the same order of magnitude as the classical teacher's
+   90,640; only the 16-parameter quantum circuit itself is qualitatively
+   under-capacity.
+2. Evaluated seed 0 at 1/2/4/8/16/32/50 DDIM steps: FID-like is flat
+   (338.3 -> 339.5 -> 341.2 -> 342.3 -> 342.6 -> 342.8 -> 342.9), with no
+   sign of the usual FID-vs-NFE improvement curve. Confirmed across all 3
+   seeds at the two extremes: 1-step 337.9±1.5 vs. 50-step 345.0±4.7
+   (3-seed mean±std), statistically indistinguishable.
+3. Interpretation: this is a negative result for the intended "QLCM needs
+   fewer steps than quantum diffusion" framing, not a confirmation of it. A
+   score net that never learns a useful denoising direction cannot show a
+   step-count-dependent quality curve to be faster than. The flatness is a
+   symptom of under-capacity, not evidence that few steps suffice at this
+   circuit size. This is mechanistically consistent with the already-reported
+   QLCM-H failure (Section "Results and Analysis" of `paper/main.tex`): the
+   same 4-qubit/depth-2 circuit fails whether used as a consistency head or
+   as an iterative score net.
+4. Scripts and artifacts: `scripts/train_quantum_teacher.py`,
+   `scripts/evaluate_quantum_diffusion.py`,
+   `scripts/run_quantum_diffusion_campaign.sh` (unattended re-run of the
+   above); checkpoints at `results/mnist/quantum_teacher_4_2_seed{0,1,2}.pt`;
+   metrics at `results/mnist/metrics_QDIFF-4-2-seed*-*step.json`, folded into
+   `results/summary.csv` (`placement == "quantum_diffusion"`); training logs
+   at `results/_log_train_quantum_teacher_seed{0,1,2}.txt`.
+5. Not done: a parameter-matched or higher-capacity version of this baseline
+   (e.g. more qubits/depth, or adding the classical residual backbone used in
+   QLCM-R) to test whether a quantum diffusion model can be trained
+   competitively at all before concluding anything about its step-count
+   scaling. This is listed as future work in `paper/main.tex`'s Conclusion.
+
+## Execution Log (2026-09-15, continued): reproducing Q-Dense (Koelle et al. 2024) as a literature-faithful quantum diffusion baseline
+
+Motivation: the same-architecture ablation above (log entry directly above)
+could not learn anything, so it could not demonstrate that QLCM needs fewer
+steps than a working many-step quantum diffusion model. The user asked
+specifically for "a standard quantum model found in the literature" to
+compare against, not another variant of our own circuit. We fetched and read
+the full text of Koelle et al. 2024, "Quantum Denoising Diffusion Models"
+(arXiv:2401.07049), and reproduced their Q-Dense architecture as described in
+Sec. 3.1/3.3/4.4 of that paper:
+
+1. New modules: `src/qlcm/quantum_ops.py` (reusable statevector gate
+   primitives: arbitrary single-qubit `Rot` gate, `RX`, and a CNOT
+   implemented as an index permutation rather than permute+einsum, since
+   CNOT only permutes basis amplitudes) and `src/qlcm/qdense.py`
+   (`QDenseDiffusionCircuit`: amplitude-embeds a flattened image into
+   `n_image_qubits` qubits, adds one ancilla qubit rotated by
+   `class_index * 2*pi/n_classes` for guidance, applies `n_layers` layers of
+   per-qubit `Rot` + a CNOT ring, then marginalizes the ancilla out of the
+   measured probabilities and rescales to the input's norm). With 6 image
+   qubits + 1 ancilla and 47 layers this is 987 parameters, matching the
+   paper's reported ~1000 for its guided MNIST-8x8 model. Extended
+   `src/datasets.py:build_dataset` with `image_size` (resize) and
+   `digit_filter` (restrict to given labels) and a `signed` flag (keep raw
+   [0,1] pixel intensities instead of the [-1,1] rescaling used everywhere
+   else in this repo, since amplitude embedding and a probability-valued
+   readout cannot represent negative values) — all backward compatible
+   (default args reproduce the previous behavior).
+2. The paper predicts the previous, less-noisy diffusion step directly (not
+   noise) precisely because its readout is a non-negative probability
+   distribution and noise is signed; we reproduce this in
+   `scripts/train_qdense_baseline.py`, which builds an explicit forward
+   noising trajectory (`forward_chain` in `src/qlcm/qdense.py`: repeated
+   Gaussian noise addition with linearly increasing scale, clamped to
+   [0, 1]) since the paper cites Ho et al. (2020) methodology but does not
+   give the exact schedule for this direct-prediction loss; this is our
+   documented interpretation, not a value from the source paper. Trained on
+   MNIST digits 0/1 only, downsampled to 8x8 (matching the paper's own
+   scoped guided experiment), 4000 images, batch size 256, tau=10, 150
+   epochs, 3 seeds.
+3. **Bug caught by looking at actual images, not just the metric**: an
+   initial implementation of the paper's output-rescaling step ("scale the
+   obtained probabilities using the input data's Euclidean norm") multiplied
+   the raw probability vector by the input norm without first renormalizing
+   the probability vector's own norm to match. Since probabilities summing
+   to 1 over 64 outcomes have a small L2 norm unless sharply peaked, this
+   caused the signal to shrink geometrically under the repeated, same-weight
+   iteration this architecture requires (norm dropping ~5-8x per step in an
+   untrained-weights check). The resulting samples were blank, saturated
+   -white 8x8 tiles at every step count from 2 onward, with complete mode
+   collapse to one class (512/512) — yet the FID-like number alone
+   (~1300-1400) did not obviously flag this as "blank images" rather than
+   merely "bad quality," so we caught it only by rendering and inspecting
+   `results/qdense/samples_*.png` directly. Fixed in `QDenseDiffusionCircuit.forward`
+   by rescaling the probability vector to match the input's norm
+   (`image_probs * (norm / probs_norm)`) instead of merely multiplying by
+   it, and retrained from scratch.
+4. With the fix, training loss (MSE against the ground-truth previous-step
+   image) drops from ~0.15 to ~0.10 over 150 epochs and plateaus there
+   across all 3 seeds — real, replicated learning, unlike the under-capacity
+   ablation in the log above. Sample grids after the fix show visible
+   digit-like strokes rather than blank tiles. Evaluated at 1/2/4/6/8/10
+   steps (samples=512) per seed: FID-like (classifier-feature) is
+   genuinely non-flat and follows the same U-shape on all 3 seeds — best
+   quality around 4 steps, worse at 1 step, worse still by 10 steps
+   (3-seed mean±std: 602.9±7.8 at 1 step, 573.2±16.8 at 4 steps, 626.1±10.3
+   at 10 steps). We interpret the post-4-step degradation as a consequence
+   of reusing the identical fixed-weight circuit at every step with no
+   timestep conditioning (per the paper's description): iterating a fixed
+   nonlinear map repeatedly tends toward its own fixed point rather than
+   continuing to refine the image, so the full trained tau is not
+   necessarily the best sampling budget for this design.
+5. Comparison: at every step count tested (1 through 10), this
+   literature-faithful reproduction is substantially worse than QLCM-R
+   (359.4±3.0 FID-like) and the classical consistency baseline
+   (346.7±16.0), even at its own best-performing step count. This is a more
+   meaningful comparison than the same-architecture ablation above, because
+   this model does learn a real, replicated denoising signal and still does
+   not close the gap with QLCM at any NFE budget tested. Caveats: different
+   dataset scope (8x8 pixels, digits 0/1, no autoencoder, vs. the rest of
+   this paper's 28x28-to-16-dim-latent, 10-class setup), our own
+   interpretation of an unspecified forward-noising schedule, and only one
+   reproduced architecture from one paper.
+6. Scripts and artifacts: `src/qlcm/quantum_ops.py`, `src/qlcm/qdense.py`,
+   `scripts/train_qdense_baseline.py`, `scripts/evaluate_qdense_baseline.py`;
+   checkpoints at `results/qdense/qdense_seed{0,1,2}.pt`; metrics at
+   `results/qdense/metrics_QDENSE-lit-seed*-*step.json`; training logs at
+   `results/_log_train_qdense_seed{0,1,2}.txt`. Full writeup in
+   `paper/main.tex` Section "A Literature-Faithful Quantum Diffusion
+   Baseline: Reproducing Q-Dense".
+7. Not done: reproducing Q-Dense at QLCM's own scale (28x28, 10 classes,
+   latent-space via the shared autoencoder) for a directly matched
+   comparison instead of the paper's own smaller 8x8/2-class scope;
+   reproducing the paper's separate "unitary single-sampling" architecture
+   (Sec. 3.4 of arXiv:2401.07049), which composes the per-step unitary into
+   one matrix for genuine single-shot generation and is a different
+   contribution from the sequential Q-Dense reproduced here. Both are listed
+   as future work in `paper/main.tex`'s Conclusion.

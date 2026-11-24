@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+import math
+
 import torch
 from torch import nn
 
-from src.models import SinusoidalTimeEmbedding
+from src.models import QuantumScoreHead, SinusoidalTimeEmbedding
 
 
 class LatentTeacherScoreNet(nn.Module):
@@ -23,6 +25,47 @@ class LatentTeacherScoreNet(nn.Module):
     def forward(self, z_t: torch.Tensor, t: torch.Tensor) -> torch.Tensor:
         features = torch.cat([z_t, self.time(t)], dim=1)
         return self.net(features)
+
+
+class QuantumLatentTeacherScoreNet(nn.Module):
+    """Quantum latent diffusion teacher: a naive quantum-denoiser baseline.
+
+    Same encoder/quantum/decoder shape as the QLCM-R quantum module
+    (`QuantumLatentConsistencyModel`), but trained as a standard multi-step
+    noise predictor (Section "teacher") rather than a consistency student.
+    This stands in for the iterative quantum diffusion models in the
+    literature, which sample over many NFEs; it exists to give the few-step
+    QLCM claim an apples-to-apples same-architecture speed comparison
+    instead of relying on cross-paper NFE counts alone."""
+
+    def __init__(
+        self,
+        latent_dim: int = 16,
+        hidden_dim: int = 256,
+        time_dim: int = 64,
+        n_qubits: int = 4,
+        n_layers: int = 2,
+    ):
+        super().__init__()
+        self.time = SinusoidalTimeEmbedding(time_dim)
+        self.encoder = nn.Sequential(
+            nn.Linear(latent_dim + time_dim, hidden_dim),
+            nn.SiLU(),
+            nn.Linear(hidden_dim, 2 * n_qubits),
+            nn.Tanh(),
+        )
+        self.quantum = QuantumScoreHead(n_qubits=n_qubits, n_layers=n_layers)
+        self.decoder = nn.Sequential(
+            nn.Linear(n_qubits + time_dim, hidden_dim),
+            nn.SiLU(),
+            nn.Linear(hidden_dim, latent_dim),
+        )
+
+    def forward(self, z_t: torch.Tensor, t: torch.Tensor) -> torch.Tensor:
+        time_emb = self.time(t)
+        q_inputs = math.pi * self.encoder(torch.cat([z_t, time_emb], dim=1))
+        q_features = self.quantum(q_inputs)
+        return self.decoder(torch.cat([q_features, time_emb], dim=1))
 
 
 class LatentNoiseSchedule:

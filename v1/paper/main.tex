@@ -54,7 +54,22 @@ sufficient, and few-step sampling only stabilized once the training script
 was corrected to perform teacher distillation rather than training from data
 alone. We report the quantum-placement result as a negative finding for the
 architectures and dataset scale tested, together with the full evidence
-package needed to reproduce or challenge it.
+package needed to reproduce or challenge it. Motivated by the possibility that
+quantum consistency distillation could still be valuable purely as a way to
+avoid the many-step sampling regime of existing quantum diffusion models, we
+additionally trained the same quantum circuit as a naive multi-step
+noise-predicting diffusion baseline rather than a consistency student. This
+baseline's training loss plateaus at 0.954$\pm$0.001 noise MSE across 3
+seeds --- barely below the 1.0 achieved by always predicting zero noise, and
+well above the classical teacher's $\approx$0.85 --- and its sample quality is
+statistically flat from 1 to 50 sampling steps (FID-like $337.9\pm1.5$ vs.\
+$345.0\pm4.7$). We interpret this as evidence that the quantum circuit's
+capacity, not the number of sampling steps, is the binding constraint at this
+qubit and depth budget: a module too weak to learn a useful score function
+cannot benefit from more NFEs, so the intended ``few-step quantum consistency
+beats many-step quantum diffusion'' comparison is not yet meaningful until a
+quantum diffusion baseline of this kind can be trained to a competitive loss
+in the first place.
 \end{abstract}
 
 \textbf{Keywords:} quantum machine learning; consistency models; latent
@@ -345,7 +360,13 @@ The planned baselines are:
     \item a parameter-matched classical latent consistency student;
     \item a compact classical MLP consistency student;
     \item existing quantum-denoising style baselines when reproducible settings
-    are available.
+    are available;
+    \item a same-architecture quantum diffusion baseline: the encoder/circuit/decoder
+    module used inside QLCM, trained as a standard multi-step noise predictor
+    (Section~\ref{sec:quantum-diffusion-baseline}) instead of a consistency
+    student, to test whether QLCM's few-step sampling is doing useful work
+    relative to the quantum module's own iterative-diffusion mode rather than
+    only relative to a classical consistency baseline.
 \end{enumerate}
 
 \subsection{Ablations}
@@ -525,6 +546,135 @@ this as a methodological lesson as much as a result: an isolated component
 fix (the sampler) was insufficient, and only fixing the training procedure to
 match what the paper claims resolved the few-step degradation.
 
+\subsection{Quantum Diffusion Baseline: Is the Speed Advantage From Consistency or From Capacity?}
+\label{sec:quantum-diffusion-baseline}
+
+The MNIST results above compare QLCM-R against a classical consistency
+student that already samples in 1--4 steps, so they cannot support a claim
+that quantum consistency distillation is \emph{faster} than anything: both
+students use the same sampler and the same step counts. The relevant speed
+comparison for that claim is against the iterative, many-step sampling used
+by existing quantum diffusion models \citep{zhang2023quddpm,kwun2024mixedquddpm,kolle2024qddm}, not against a same-step classical
+consistency model. To test this with an apples-to-apples, same-architecture
+comparison rather than relying on cross-paper NFE counts, we trained
+\texttt{QuantumLatentTeacherScoreNet}: the identical encoder/quantum-circuit/decoder
+module used inside QLCM-R and QLCM-H (4 qubits, depth 2), but trained with the
+standard DDPM noise-prediction loss used for the classical teacher
+(Section~\ref{sec:teacher}) instead of consistency
+distillation, for the same 150 epochs. We then sampled it with deterministic
+DDIM (the same \texttt{schedule.ddim\_step} update used elsewhere in this
+paper) at 1, 2, 4, 8, 16, 32, and 50 steps.
+
+This baseline's training loss plateaus at $0.954\pm0.001$ noise MSE across 3
+seeds, essentially indistinguishable from the $1.0$ achieved by a trivial
+zero-noise predictor (noise is unit-variance, so predicting zero everywhere
+gives MSE $=1.0$) and far above the classical teacher's $\approx$0.85
+plateau (Section~\ref{sec:teacher}), despite the surrounding
+classical encoder/decoder ($44{,}584$ total parameters) being of the same
+order as the classical teacher's $90{,}640$; only the 16-parameter quantum
+circuit itself differs qualitatively in capacity. The consequence is visible
+in the step sweep: FID-like is essentially flat from 1 step ($338.3$, seed 0)
+to 50 steps ($342.9$, seed 0), and the same flatness holds across seeds at
+the two extremes ($337.9\pm1.5$ at 1 step vs.\ $345.0\pm4.7$ at 50 steps,
+3-seed mean$\pm$std). A model with more informative per-step denoising
+directions would be expected to show the usual FID-vs-NFE trade-off (better
+quality with more steps, up to diminishing returns); here there is none,
+because the score net never learned a strong direction to refine in the
+first place.
+
+We had hoped this experiment would show a naive quantum diffusion baseline
+needing many more steps than QLCM to reach comparable quality, giving the
+few-step QLCM result a second, capacity-independent motivation beyond the
+parameter-efficiency question addressed in
+Sections~\ref{sec:results}--\ref{sec:few-step-results}. The data does not
+support that story: the quantum module here is too weak to learn a useful
+score function at any step budget, so it cannot demonstrate a speed
+disadvantage relative to QLCM in the first place --- there is no working
+many-step quantum diffusion model at this qubit/depth setting to be faster
+than. This is consistent with, and mechanistically explains, the QLCM-H
+failure mode (Section~\ref{sec:results}): the same 4-qubit, depth-2 circuit
+that collapses sample diversity when used as the primary consistency
+bottleneck also fails to learn effective iterative denoising. We take this as
+evidence that circuit capacity, not sampling-trajectory design, is the
+binding constraint at this qubit range, and that the ``few-step quantum
+consistency vs.\ many-step quantum diffusion'' comparison motivating this
+experiment cannot be made meaningfully until a quantum diffusion baseline of
+this kind trains to a loss competitive with its classical counterpart.
+
+\subsection{A Literature-Faithful Quantum Diffusion Baseline: Reproducing Q-Dense}
+\label{sec:qdense-baseline}
+
+Since our own quantum module was too capacity-limited to make the speed
+comparison meaningful, we separately reproduced an actual published quantum
+diffusion architecture: Q-Dense from \citet{kolle2024qddm}. Q-Dense
+amplitude-embeds a flattened image into $\log_2(\text{pixels})$ qubits, adds
+one ancilla qubit rotated by the class label for guidance, applies a stack of
+strongly entangling layers (one general single-qubit rotation per qubit per
+layer plus a ring of CNOTs), and reads out joint probabilities of the image
+qubits (ancilla traced out) rescaled to the input's scale. Unlike our own
+quantum modules, which predict signed noise, Q-Dense's probability-valued
+readout is non-negative by construction, so \citet{kolle2024qddm} train it to
+predict the less-noisy image at the previous diffusion step directly, not
+noise; we reproduce this design and training objective in
+\texttt{src/qlcm/qdense.py} and \texttt{scripts/train\_qdense\_baseline.py}.
+Following their guided MNIST-8x8 configuration, we use 6 image qubits + 1
+ancilla (7 total), 47 layers ($987$ trainable parameters, matching their
+reported $\approx$1000), $\tau=10$ diffusion steps, and MNIST digits 0 and 1
+downsampled to 8x8 --- a smaller, pixel-space, 2-class, no-autoencoder setting
+than QLCM's own 28x28-latent, 10-class setup, so the numbers below are
+suggestive, not strictly apples-to-apples with the rest of this paper. The
+paper does not specify its exact forward-noising schedule beyond citing Ho et
+al.\ (2020); we use a documented linear-noise-scale random walk with clamping
+to $[0,1]$ (\texttt{forward\_chain} in \texttt{src/qlcm/qdense.py}) as our
+interpretation.
+
+An initial implementation of the paper's output-rescaling step (multiplying
+the raw probability vector by the input's Euclidean norm) caused the signal
+to collapse geometrically toward zero under the repeated, same-weight
+iteration this architecture requires: probabilities summing to 1 over 64
+outcomes have a small L2 norm unless the distribution is sharply peaked, so
+multiplying by the input norm without first renormalizing the probability
+vector's own norm left later steps producing blank, saturated-white images
+(FID-like $>1300$, complete mode collapse to one class from step 2 onward).
+We caught this by inspecting sample grids directly rather than trusting the
+FID-like number alone, fixed it by rescaling the probability vector to match
+the input's norm rather than merely multiplying by it, and retrained; sample
+grids after the fix show real digit-like structure (visible strokes
+resembling 0s and 1s) rather than blank tiles.
+
+With the fix, training loss (MSE against the previous-step image) drops from
+$\approx0.15$ to $\approx0.10$ over 150 epochs and plateaus there across all
+3 seeds --- a real, if modest, improvement over initialization, unlike our
+own quantum module's failure to beat a trivial baseline in
+Section~\ref{sec:quantum-diffusion-baseline}. The resulting FID-like-vs-NFE
+curve is genuinely non-flat and replicates across 3 seeds: quality improves
+from 1 step to a minimum (best quality) around 4 steps, then \emph{degrades}
+through the full trained $\tau=10$ steps (3-seed mean$\pm$std FID-like:
+$602.9\pm7.8$ at 1 step, $573.2\pm16.8$ at 4 steps, $626.1\pm10.3$ at 10
+steps). We interpret the degradation past 4 steps as a consequence of reusing
+the identical fixed-weight circuit at every diffusion step (Q-Dense, as
+described, does not condition the circuit on the timestep): iterating a
+fixed nonlinear map repeatedly tends toward its own fixed points rather than
+continuing to refine the image, so running the model for its full trained
+$\tau$ is not guaranteed to be the best sampling budget for this design.
+
+At every step count tested, this literature-faithful many-step quantum
+diffusion reproduction is substantially worse than QLCM-R ($359.4\pm3.0$) and
+the classical consistency baseline ($346.7\pm16.0$) on the classifier-feature
+FID-like metric, even accounting for the scope difference noted above. This
+is a more meaningful comparison than Section~\ref{sec:quantum-diffusion-baseline}'s
+same-architecture ablation, because this model does learn a real, replicated,
+non-trivial denoising signal, and still does not reach QLCM's quality at any
+NFE budget from 1 to 10 --- including at its own best-performing step count.
+Taken together with Section~\ref{sec:quantum-diffusion-baseline}, this is
+suggestive evidence, not proof, that QLCM's few-step consistency-distilled
+sampling is not merely failing to be worse than many-step quantum diffusion
+by default: a real many-step quantum diffusion baseline, reproduced from the
+literature at comparable qubit count, does not close that gap either. We
+emphasize the caveats: different dataset scope (8x8, digits 0/1, no
+autoencoder), our own interpretation of the unspecified noise schedule, and
+only 3 seeds on one architecture from one paper.
+
 \subsection{Fashion-MNIST}
 \label{sec:fmnist-results}
 
@@ -584,6 +734,27 @@ specific to the quantum module.
     classical/QLCM-R comparison now have 3-seed statistics; step-count
     scaling (2-step, 4-step) remains single-seed (seed 0) for all
     configurations.
+    \item A same-architecture quantum diffusion baseline
+    (Section~\ref{sec:quantum-diffusion-baseline}), trained as a standard
+    multi-step noise predictor instead of a consistency student, plateaus at
+    a training loss barely better than a trivial zero-noise predictor and
+    shows no FID-like dependence on step count from 1 to 50 steps. This
+    baseline is too capacity-limited to make the intended ``QLCM needs fewer
+    steps than quantum diffusion'' comparison meaningful, and mechanistically
+    corroborates the QLCM-H failure mode: at 4 qubits and depth 2, the
+    circuit itself, not the sampling trajectory, is the bottleneck.
+    \item A literature-faithful reproduction of Q-Dense
+    \citep{kolle2024qddm} (Section~\ref{sec:qdense-baseline}), an actual
+    published quantum diffusion architecture at comparable qubit count (7
+    qubits, 987 parameters), does learn a real, 3-seed-replicated denoising
+    signal (unlike our own under-capacity baseline above) and shows a
+    genuine, non-flat FID-like-vs-NFE curve that improves from 1 to 4 steps
+    and then degrades through its full trained 10 steps. Even at its best
+    step count, it remains substantially worse than QLCM-R and the classical
+    consistency baseline. This is suggestive (not conclusive, given scope
+    differences and only one reproduced architecture) evidence that QLCM's
+    few-step sampling is not simply failing to be worse than many-step
+    quantum diffusion by default.
 \end{enumerate}
 
 \section{Discussion}
@@ -612,7 +783,21 @@ distillation target network is the online student itself under
 stabilize training and was not tested here. Sixth, the Fashion-MNIST mode
 collapse (Section~\ref{sec:fmnist-results}) was not resolved by any fix applied in this campaign
 and limits how much weight the Fashion-MNIST numbers should carry relative to
-MNIST.
+MNIST. Seventh, the quantum diffusion baseline
+(Section~\ref{sec:quantum-diffusion-baseline}) was not parameter-matched to
+the classical teacher (44{,}584 vs.\ 90{,}640 parameters, since it omits the
+classical residual backbone present in QLCM-R); this asymmetry does not
+plausibly explain its near-zero-predictor training loss, since the
+surrounding encoder/decoder capacity is still the same order of magnitude as
+the classical teacher's and only the 16-parameter quantum circuit differs
+qualitatively, but a parameter-matched version of this baseline was not run
+and remains future work. Eighth, the Q-Dense reproduction
+(Section~\ref{sec:qdense-baseline}) operates on a smaller, pixel-space,
+2-class, no-autoencoder problem (8x8 MNIST digits 0/1) than the rest of this
+paper's 28x28-latent, 10-class setup, and relies on our own interpretation
+of a forward-noising schedule the source paper does not fully specify; its
+comparison against QLCM-R and the classical baseline should be read as
+suggestive rather than a controlled, matched experiment.
 
 The empirical results obtained here argue against the strongest hypothesized
 outcome from the research plan (QLCM-R matching the classical baseline with
@@ -657,13 +842,45 @@ stable for both placements once training performs genuine consistency
 distillation from the teacher, resolving a degradation that persisted after
 fixing only the sampler in isolation. These are negative results within the
 scope tested, not evidence against quantum consistency modules in general.
-Immediate next steps are: (1) test an EMA target network for consistency
-distillation, as in the original formulation, in place of the current
-online-student self-reference; (2) diagnose and address the persistent
-Fashion-MNIST mode collapse, likely by increasing the training subset size or
-student training budget; (3) test whether a larger teacher or latent
-dimension changes the residual-placement result; and (4) extend the qubit
-range to 8 qubits as originally planned, compute permitting.
+We also tested whether QLCM's few-step sampling is faster than a same-scale
+quantum diffusion model, rather than only comparable in parameter efficiency
+to a same-step classical consistency model: a same-architecture quantum
+diffusion baseline (Section~\ref{sec:quantum-diffusion-baseline}) plateaus at
+a training loss indistinguishable from a trivial zero-noise predictor and
+shows no dependence of sample quality on step count from 1 to 50 steps. This
+means the intended comparison is not yet meaningful at this qubit and depth
+budget with our own quantum module: a quantum diffusion model that never
+learns a useful score function cannot be shown to need more steps than QLCM.
+We therefore also reproduced an actual published quantum diffusion
+architecture, Q-Dense \citep{kolle2024qddm}
+(Section~\ref{sec:qdense-baseline}), at a comparable qubit count (7 qubits,
+987 parameters); after fixing an output-normalization bug that initially
+caused it to collapse to blank images, it does learn a real, 3-seed-replicated
+denoising signal and shows a genuine FID-like-vs-NFE curve peaking in quality
+around 4 of its 10 trained steps before degrading. Even at its best step
+count, it remains substantially worse than QLCM-R and the classical
+consistency baseline. Taken together, these two experiments are suggestive,
+not conclusive, evidence that QLCM's few-step sampling is not merely failing
+to be worse than many-step quantum diffusion by default: our own module could
+not learn to be a working many-step baseline at all, and a real one
+reproduced from the literature does not close the quality gap with QLCM
+either. This sharpens, rather than fully answers, the motivating question
+from this paper's introduction --- whether quantum consistency modules are
+useful chiefly for a speed advantage over quantum diffusion --- since only
+one external architecture was reproduced, at a restricted dataset scope
+(8x8, digits 0/1, no autoencoder) and with our own interpretation of an
+underspecified noise schedule. Immediate next steps are: (1) test an EMA
+target network for consistency distillation, as in the original formulation,
+in place of the current online-student self-reference; (2) diagnose and
+address the persistent Fashion-MNIST mode collapse, likely by increasing the
+training subset size or student training budget; (3) test whether a larger
+teacher or latent dimension changes the residual-placement result; (4)
+extend the qubit range to 8 qubits as originally planned, compute
+permitting; (5) revisit our own quantum diffusion baseline with a
+parameter-matched or higher-capacity circuit to establish whether it can be
+trained to a competitive noise-prediction loss at all; and (6) reproduce
+Q-Dense at QLCM's own 28x28-latent, 10-class scale (rather than 8x8
+digits 0/1) for a directly matched few-step-vs-many-step comparison.
 
 \bibliographystyle{unsrtnat}
 \bibliography{references}
