@@ -14,6 +14,7 @@ surrogate. Results: [v2/RESULTS.md](v2/RESULTS.md). Manuscript: [paper/](paper/R
 - [Research decision, protocol, audit, literature and preregistration](v2/PROTOCOL.md)
 - [CPU smoke configuration](v2/smoke.json), [GPU pilot configuration](v2/gpu_pilot.json)
 - [Pilot implementation](v2/core.py), [runner](v2/run.py), [orchestrator](v2/orchestrate.py)
+- Quantum diffusion / QDense track (pure-torch circuits, rescued from fff005, 2026-09-15): [v1/README.md](v1/README.md), [v1/src/qlcm/qdense.py](v1/src/qlcm/qdense.py), [v1/scripts/run_quantum_diffusion_campaign.sh](v1/scripts/run_quantum_diffusion_campaign.sh); design notes in [docs/research_design.md](docs/research_design.md)
 - Historical study: [manuscript](v1/paper/main.tex), [execution log](v1/experiments/execution_checklist.md), [configs](v1/configs/), [figures](v1/figures/)
 
 `v1/` remains unchanged. Its classical-teacher campaign is preliminary evidence,

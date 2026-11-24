@@ -9,6 +9,7 @@ FIELDS = [
     "run_id",
     "dataset",
     "placement",
+    "hidden_dim",
     "qubits",
     "depth",
     "seed",
