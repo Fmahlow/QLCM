@@ -1,1 +1,0 @@
-Completed eval at /home/mahlow/QLCM/results/v2-e9-correlators/fashion_mnist/seed-2/classical_branch-h16-q4-d2-zz

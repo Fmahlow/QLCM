@@ -1,1 +1,0 @@
-Completed eval at /home/mahlow/QLCM/results/v2-campaign-datasets-teachers/mnist/seed-2/teacher-hybrid

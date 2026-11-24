@@ -1,1 +1,0 @@
-Completed eval at /home/mahlow/QLCM/results/v2-e10-capacity-seeds/mnist/seed-5/classical_branch-h128-q4-d2

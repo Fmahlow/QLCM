@@ -1,1 +1,0 @@
-Completed teacher at /home/mahlow/QLCM/results/v2-e10-capacity-seeds/fashion_mnist/seed-5/surrogate-h0-q4-d2

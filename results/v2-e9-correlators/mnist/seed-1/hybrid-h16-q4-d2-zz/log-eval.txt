@@ -1,1 +1,0 @@
-Completed eval at /home/mahlow/QLCM/results/v2-e9-correlators/mnist/seed-1/hybrid-h16-q4-d2-zz

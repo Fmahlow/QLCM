@@ -1,1 +1,0 @@
-Completed teacher at /home/mahlow/QLCM/results/v2-e10-capacity-seeds/mnist/seed-3/classical-h2-q4-d2

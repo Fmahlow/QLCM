@@ -1,1 +1,0 @@
-Completed eval at /home/mahlow/QLCM/results/v2-mnist-replication/mnist/seed-6/teacher-hybrid

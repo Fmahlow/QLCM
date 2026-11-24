@@ -1,1 +1,0 @@
-Completed distill at /home/mahlow/QLCM/results/v2-campaign-datasets-teachers/pneumoniamnist/seed-0/teacher-no_entanglement

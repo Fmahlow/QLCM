@@ -1,1 +1,0 @@
-Completed distill at /home/mahlow/QLCM/results/v2-e9-correlators/fashion_mnist/seed-1/classical_branch-h0-q4-d2
